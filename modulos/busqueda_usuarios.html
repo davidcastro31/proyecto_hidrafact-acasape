@@ -1,0 +1,145 @@
+<form id="frmBusquedaUsuarios">
+    <div class="card text-bg-dark" style="min-width: 900px;">
+        <div class="card-header">
+            <div class="d-flex align-items-center">
+                <h5 class="mb-0 flex-grow-1">BÚSQUEDA DE USUARIOS</h5>
+                <input type="text" id="txtBuscar" class="form-control form-control-sm w-25 me-2" placeholder="Buscar..." />
+                <button data-form="busqueda_usuarios" type="button" class="btn-close btn-close-white" aria-label="Close"></button>
+            </div>
+        </div>
+        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover table-dark">
+                <thead>
+                    <tr>
+                        <th>N° CONTADOR</th>
+                        <th>NOMBRE</th>
+                        <th>CORREO</th>
+                        <th>ESTADO</th>
+                        <th>ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="tblUsuarios"></tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Obtener usuarios al cargar
+    obtenerUsuarios();
+
+    // Búsqueda en tiempo real
+    txtBuscar.addEventListener('input', () => {
+        buscarUsuarios(txtBuscar.value);
+    });
+
+    async function obtenerUsuarios() {
+        let response = await fetch("/usuarios");
+        let respuesta = await response.json();
+        mostrarDatosUsuarios(respuesta);
+    }
+
+    async function buscarUsuarios(termino) {
+        let response = await fetch(`/buscar_usuarios?q=${termino}`);
+        let respuesta = await response.json();
+        mostrarDatosUsuarios(respuesta);
+    }
+
+    function mostrarDatosUsuarios(usuarios) {
+        let filas = "";
+        
+        if (usuarios.length === 0) {
+            filas = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted">No se encontraron usuarios</td>
+                </tr>
+            `;
+        } else {
+            usuarios.forEach(usuario => {
+                let badgeEstado = usuario.estado === 'Activo' 
+                    ? '<span class="badge bg-success">Activo</span>' 
+                    : '<span class="badge bg-danger">Inactivo</span>';
+                
+                filas += `
+                    <tr onclick='seleccionarUsuario(${JSON.stringify(usuario)})' style="cursor: pointer;">
+                        <td>${usuario.num_contador}</td>
+                        <td>${usuario.nombre}</td>
+                        <td>${usuario.correo || '-'}</td>
+                        <td>${badgeEstado}</td>
+                        <td>
+                            <button onclick='eliminarUsuario(${JSON.stringify(usuario)}, event)' class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        
+        tblUsuarios.innerHTML = filas;
+    }
+
+    function seleccionarUsuario(usuario) {
+        // Cerrar ventana de búsqueda
+        $('#busqueda_usuarios').hide();
+        
+        // Mostrar datos en el formulario principal
+        if (window.mostrarUsuario) {
+            window.mostrarUsuario(usuario);
+        }
+    }
+
+    function eliminarUsuario(usuario, event) {
+        event.stopPropagation(); // Evitar que se dispare el click de la fila
+        
+        Swal.fire({
+            title: '¿Eliminar usuario?',
+            html: `¿Está seguro de eliminar a:<br><strong>${usuario.nombre}</strong>?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let datos = {
+                    accion: "eliminar",
+                    idUsuario: usuario.idUsuario
+                };
+                
+                fetch("/usuarios", {
+                    method: "POST",
+                    body: JSON.stringify(datos)
+                })
+                .then(response => response.json())
+                .then(respuesta => {
+                    if (respuesta.msg === "ok") {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            timerProgressBar: true
+                        });
+                        
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Usuario eliminado'
+                        });
+                        
+                        obtenerUsuarios(); // Recargar tabla
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: `No se pudo eliminar: ${respuesta.msg}`,
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                });
+            }
+        });
+    }
+</script>

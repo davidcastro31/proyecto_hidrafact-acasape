@@ -3,10 +3,12 @@ from urllib import parse
 from urllib.parse import urlparse, parse_qs
 import json 
 import crud_login
+import crud_usuario
 
 port = 3000
 
 crudLogin = crud_login.crud_login()
+crudUsuario = crud_usuario.crud_usuario()
 
 class miServidor(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -17,6 +19,30 @@ class miServidor(SimpleHTTPRequestHandler):
         # Redirigir raíz al login
         if self.path == "/":
             self.path = "/modulos/login.html"
+            return SimpleHTTPRequestHandler.do_GET(self)
+        
+        # Obtener usuarios
+        if self.path == "/usuarios":
+            usuarios = crudUsuario.consultar("")
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(usuarios).encode('utf-8'))
+            return
+        
+        # Buscar usuarios
+        if path == "/buscar_usuarios":
+            buscar = parametros.get('q', [''])[0]
+            usuarios = crudUsuario.consultar(buscar)
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(usuarios).encode('utf-8'))
+            return
+        
+        # Cargar módulos HTML
+        if path == "/vistas":
+            self.path = '/modulos/' + parametros['form'][0] + '.html'
             return SimpleHTTPRequestHandler.do_GET(self)
         
         # Servir archivos estáticos normalmente
@@ -32,6 +58,11 @@ class miServidor(SimpleHTTPRequestHandler):
         # Manejar login
         if self.path == "/login":
             resp = crudLogin.verificar(datos['usuario'], datos['clave'])
+        
+        # Manejar CRUD de usuarios
+        elif self.path == "/usuarios":
+            resp = {"msg": crudUsuario.administrar(datos)}
+        
         else:
             resp = {"status": "error", "msg": "Ruta no encontrada"}
         

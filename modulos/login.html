@@ -42,26 +42,41 @@
                                 <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
                             </button>
                         </form>
-
-                        <!-- Mensaje de error -->
-                        <div id="mensajeError" class="alert alert-danger mt-3 d-none" role="alert"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const frmLogin = document.getElementById('frmLogin');
         const txtUsuario = document.getElementById('txtUsuario');
         const txtClave = document.getElementById('txtClave');
-        const mensajeError = document.getElementById('mensajeError');
 
         frmLogin.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Ocultar mensaje de error previo
-            mensajeError.classList.add('d-none');
+            // Validar campos vacíos
+            if (!txtUsuario.value.trim() || !txtClave.value.trim()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos incompletos',
+                    text: 'Por favor complete todos los campos',
+                    confirmButtonColor: '#0d6efd'
+                });
+                return;
+            }
+
+            // Mostrar loading
+            Swal.fire({
+                title: 'Verificando credenciales...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
 
             // Preparar datos
             const datos = {
@@ -79,18 +94,34 @@
                 const resultado = await response.json();
 
                 if (resultado.status === 'ok') {
-                    // Login exitoso, guardar datos y redirigir
-                    sessionStorage.setItem('usuario', resultado.usuario);
-                    sessionStorage.setItem('rol', resultado.rol);
-                    window.location.href = '/index.html';
+                    // Login exitoso
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Bienvenido!',
+                        text: `Hola ${resultado.usuario}`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        sessionStorage.setItem('usuario', resultado.usuario);
+                        sessionStorage.setItem('rol', resultado.rol);
+                        window.location.href = '/index.html';
+                    });
                 } else {
-                    // Mostrar error
-                    mensajeError.textContent = resultado.msg;
-                    mensajeError.classList.remove('d-none');
+                    // Error de credenciales
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de autenticación',
+                        text: resultado.msg,
+                        confirmButtonColor: '#dc3545'
+                    });
                 }
             } catch (error) {
-                mensajeError.textContent = 'Error de conexión con el servidor';
-                mensajeError.classList.remove('d-none');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo conectar con el servidor',
+                    confirmButtonColor: '#dc3545'
+                });
             }
         });
     </script>

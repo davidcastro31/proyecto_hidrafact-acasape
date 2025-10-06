@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-light">
+    <!-- Header -->
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center w-100">
+                <!-- Flecha para regresar -->
+                <button class="btn btn-outline-light me-3" onclick="window.location.href='/index.html'">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                
+                <!-- Título centrado -->
+                <h5 class="text-white mb-0 flex-grow-1 text-center">USUARIOS</h5>
+                
+                <!-- Botones derecha -->
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success btn-sm" id="btnAgregar">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                    <input type="text" id="txtBuscar" class="form-control form-control-sm" placeholder="Buscar..." style="width: 200px;">
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Tabla de usuarios -->
+    <div class="container-fluid mt-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>N° Usuario</th>
+                            <th>Nombre</th>
+                            <th>N° Contador</th>
+                            <th>Correo</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblUsuarios">
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Agregar/Modificar Usuario -->
+    <div class="modal fade" id="modalUsuario" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="tituloModal">Agregar Usuario</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="frmUsuario">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">N° Contador</label>
+                            <input type="text" class="form-control" id="txtNumContador" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre Completo</label>
+                            <input type="text" class="form-control" id="txtNombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="txtCorreo">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" id="cboEstado">
+                                <option value="Activo">Activo</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let accion = "nuevo";
+        let idUsuario = 0;
+        let modalUsuario = new bootstrap.Modal(document.getElementById('modalUsuario'));
+
+        // Cargar usuarios al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            obtenerUsuarios();
+        });
+
+        // Búsqueda en tiempo real
+        txtBuscar.addEventListener('input', () => {
+            buscarUsuarios(txtBuscar.value);
+        });
+
+        // Botón agregar
+        btnAgregar.addEventListener('click', () => {
+            accion = "nuevo";
+            idUsuario = 0;
+            document.getElementById('tituloModal').textContent = "Agregar Usuario";
+            frmUsuario.reset();
+            modalUsuario.show();
+        });
+
+        // Guardar usuario
+        frmUsuario.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            let datos = {
+                accion,
+                idUsuario,
+                num_contador: txtNumContador.value,
+                nombre: txtNombre.value,
+                correo: txtCorreo.value,
+                estado: cboEstado.value
+            };
+
+            let response = await fetch("/usuarios", {
+                method: "POST",
+                body: JSON.stringify(datos)
+            });
+            
+            let respuesta = await response.json();
+
+            if (respuesta.msg === "ok") {
+                modalUsuario.hide();
+                
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+
+                Toast.fire({
+                    icon: 'success',
+                    title: accion === "nuevo" ? 'Usuario agregado' : 'Usuario modificado'
+                });
+
+                obtenerUsuarios();
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: respuesta.msg
+                });
+            }
+        });
+
+        // Obtener todos los usuarios
+        async function obtenerUsuarios() {
+            let response = await fetch("/usuarios");
+            let usuarios = await response.json();
+            mostrarUsuarios(usuarios);
+        }
+
+        // Buscar usuarios
+        async function buscarUsuarios(termino) {
+            let response = await fetch(`/buscar_usuarios?q=${termino}`);
+            let usuarios = await response.json();
+            mostrarUsuarios(usuarios);
+        }
+
+        // Mostrar usuarios en tabla
+        function mostrarUsuarios(usuarios) {
+            let filas = "";
+
+            if (usuarios.length === 0) {
+                filas = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No se encontraron usuarios</td>
+                    </tr>
+                `;
+            } else {
+                usuarios.forEach((usuario, index) => {
+                    let badgeEstado = usuario.estado === 'Activo' 
+                        ? '<span class="badge bg-success">Activo</span>' 
+                        : '<span class="badge bg-secondary">Inactivo</span>';
+                    
+                    filas += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${usuario.nombre}</td>
+                            <td>${usuario.num_contador}</td>
+                            <td>${usuario.correo || '-'}</td>
+                            <td>${badgeEstado}</td>
+                            <td class="text-center">
+                                <button onclick='modificarUsuario(${JSON.stringify(usuario)})' class="btn btn-warning btn-sm" title="Modificar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button onclick='deshabilitarUsuario(${JSON.stringify(usuario)})' class="btn btn-secondary btn-sm" title="Deshabilitar">
+                                    <i class="bi bi-slash-circle"></i>
+                                </button>
+                                <button onclick='eliminarUsuario(${JSON.stringify(usuario)})' class="btn btn-danger btn-sm" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            tblUsuarios.innerHTML = filas;
+        }
+
+        // Modificar usuario
+        function modificarUsuario(usuario) {
+            accion = "modificar";
+            idUsuario = usuario.idUsuario;
+            document.getElementById('tituloModal').textContent = "Modificar Usuario";
+            
+            txtNumContador.value = usuario.num_contador;
+            txtNombre.value = usuario.nombre;
+            txtCorreo.value = usuario.correo || '';
+            cboEstado.value = usuario.estado;
+            
+            modalUsuario.show();
+        }
+
+        // Deshabilitar usuario
+        function deshabilitarUsuario(usuario) {
+            let nuevoEstado = usuario.estado === 'Activo' ? 'Inactivo' : 'Activo';
+            let textoAccion = usuario.estado === 'Activo' ? 'deshabilitar' : 'habilitar';
+            
+            Swal.fire({
+                title: `¿${textoAccion.charAt(0).toUpperCase() + textoAccion.slice(1)} usuario?`,
+                html: `¿Está seguro de ${textoAccion} a:<br><strong>${usuario.nombre}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, continuar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    let datos = {
+                        accion: "modificar",
+                        idUsuario: usuario.idUsuario,
+                        num_contador: usuario.num_contador,
+                        nombre: usuario.nombre,
+                        correo: usuario.correo,
+                        estado: nuevoEstado
+                    };
+
+                    let response = await fetch("/usuarios", {
+                        method: "POST",
+                        body: JSON.stringify(datos)
+                    });
+
+                    let respuesta = await response.json();
+
+                    if (respuesta.msg === "ok") {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            timerProgressBar: true
+                        });
+
+                        Toast.fire({
+                            icon: 'success',
+                            title: `Usuario ${textoAccion}do`
+                        });
+
+                        obtenerUsuarios();
+                    }
+                }
+            });
+        }
+
+        // Eliminar usuario
+        function eliminarUsuario(usuario) {
+            Swal.fire({
+                title: '¿Eliminar usuario?',
+                html: `¿Está seguro de eliminar a:<br><strong>${usuario.nombre}</strong>?<br><small class="text-danger">Esta acción no se puede deshacer</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    let datos = {
+                        accion: "eliminar",
+                        idUsuario: usuario.idUsuario
+                    };
+
+                    let response = await fetch("/usuarios", {
+                        method: "POST",
+                        body: JSON.stringify(datos)
+                    });
+
+                    let respuesta = await response.json();
+
+                    if (respuesta.msg === "ok") {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            timerProgressBar: true
+                        });
+
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Usuario eliminado'
+                        });
+
+                        obtenerUsuarios();
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
