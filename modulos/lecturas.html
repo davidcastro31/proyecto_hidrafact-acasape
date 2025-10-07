@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background-color: #0d6efd !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .table thead th {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .btn-action {
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .modal-content {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            background-color: #0d6efd;
+            border: none;
+        }
+        
+        .info-card {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        #txtBuscarUsuario {
+            border-radius: 20px;
+            padding-left: 2.5rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 10px center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center w-100">
+                <!-- Flecha para regresar -->
+                <button class="btn btn-outline-light rounded-circle me-3" onclick="window.location.href='/index.html'">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                
+                <!-- Título centrado -->
+                <h4 class="text-white mb-0 flex-grow-1 text-center fw-bold">
+                    <i class="bi bi-clipboard-data-fill me-2"></i>LECTURAS
+                </h4>
+                
+                <!-- Controles derecha -->
+                <div class="d-flex gap-2 align-items-center">
+                    <button class="btn btn-outline-light btn-sm" id="btnAnterior" title="Usuario anterior">
+                        <i class="bi bi-arrow-left-circle"></i>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" id="btnSiguiente" title="Usuario siguiente">
+                        <i class="bi bi-arrow-right-circle"></i>
+                    </button>
+                    <input type="text" id="txtBuscarUsuario" class="form-control form-control-sm" placeholder="Buscar usuario..." style="width: 250px;">
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Información del usuario -->
+    <div class="container-fluid mt-4 px-4">
+        <div class="info-card" id="infoUsuario">
+            <div class="row">
+                <div class="col-md-3">
+                    <h6 class="mb-1">N° Usuario</h6>
+                    <h5 class="fw-bold" id="txtIdUsuario">-</h5>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-1">Nombre</h6>
+                    <h5 class="fw-bold" id="txtNombreUsuario">-</h5>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-1">N° Contador</h6>
+                    <h5 class="fw-bold" id="txtContador">-</h5>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-1">Correo</h6>
+                    <h5 class="fw-bold" id="txtCorreo">-</h5>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de lecturas -->
+        <div class="card shadow">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Historial de Lecturas</h5>
+                <button class="btn btn-success btn-sm" id="btnNuevaLectura">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Nueva Lectura
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Lectura Anterior (m³)</th>
+                                <th>Lectura Actual (m³)</th>
+                                <th>Consumo (m³)</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblLecturas">
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    Seleccione un usuario para ver sus lecturas
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/modificar lectura -->
+    <div class="modal fade" id="modalLectura" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-white fw-bold" id="tituloModal">
+                        <i class="bi bi-plus-circle-fill me-2"></i>Nueva Lectura
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="frmLectura">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-calendar-event text-primary"></i> Fecha de Lectura
+                            </label>
+                            <input type="date" class="form-control" id="txtFecha" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-speedometer text-primary"></i> Lectura Anterior (m³)
+                            </label>
+                            <input type="number" step="0.01" class="form-control" id="txtLecturaAnterior" readonly>
+                            <small class="text-muted">Se toma automáticamente de la última lectura</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-speedometer2 text-primary"></i> Lectura Actual (m³)
+                            </label>
+                            <input type="number" step="0.01" class="form-control" id="txtLecturaActual" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-droplet-fill text-primary"></i> Consumo (m³)
+                            </label>
+                            <input type="number" step="0.01" class="form-control" id="txtConsumo" readonly>
+                            <small class="text-muted">Se calcula automáticamente</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-1"></i>Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let usuarios = [];
+        let usuarioActualIndex = 0;
+        let accion = "nuevo";
+        let idLectura = 0;
+        let modalLectura = null;
+
+        // Cargar usuarios al iniciar
+        document.addEventListener('DOMContentLoaded', async () => {
+            modalLectura = new bootstrap.Modal(document.getElementById('modalLectura'));
+            await cargarUsuarios();
+            if (usuarios.length > 0) {
+                mostrarUsuario(0);
+            }
+            
+            // Fecha actual por defecto
+            txtFecha.value = new Date().toISOString().split('T')[0];
+        });
+
+        // Cargar todos los usuarios
+        async function cargarUsuarios() {
+            try {
+                let response = await fetch("/api/usuarios");
+                usuarios = await response.json();
+            } catch (error) {
+                console.error("Error al cargar usuarios:", error);
+                usuarios = [];
+            }
+        }
+
+        // Buscar usuario
+        txtBuscarUsuario.addEventListener('input', async () => {
+            let termino = txtBuscarUsuario.value;
+            try {
+                let response = await fetch(`/api/buscar_usuarios?q=${termino}`);
+                usuarios = await response.json();
+                if (usuarios.length > 0) {
+                    usuarioActualIndex = 0;
+                    await mostrarUsuario(0);
+                }
+            } catch (error) {
+                console.error("Error al buscar usuarios:", error);
+            }
+        });
+
+        // Navegación entre usuarios
+        btnAnterior.addEventListener('click', () => {
+            if (usuarioActualIndex > 0) {
+                usuarioActualIndex--;
+                mostrarUsuario(usuarioActualIndex);
+            }
+        });
+
+        btnSiguiente.addEventListener('click', () => {
+            if (usuarioActualIndex < usuarios.length - 1) {
+                usuarioActualIndex++;
+                mostrarUsuario(usuarioActualIndex);
+            }
+        });
+
+        // Mostrar información del usuario y sus lecturas
+        async function mostrarUsuario(index) {
+            usuarioActualIndex = index;
+            let usuario = usuarios[index];
+            
+            txtIdUsuario.textContent = usuario.idUsuario;
+            txtNombreUsuario.textContent = usuario.nombre;
+            txtContador.textContent = usuario.num_contador;
+            txtCorreo.textContent = usuario.correo || 'Sin correo';
+            
+            // Cargar lecturas del usuario
+            await cargarLecturas(usuario.idUsuario);
+        }
+
+        // Cargar lecturas de un usuario
+        async function cargarLecturas(idUsuario) {
+            try {
+                let response = await fetch(`/api/lecturas?idUsuario=${idUsuario}`);
+                let texto = await response.text();
+                console.log("Respuesta del servidor:", texto);
+                
+                let lecturas = texto ? JSON.parse(texto) : [];
+                mostrarLecturas(lecturas);
+            } catch (error) {
+                console.error("Error al cargar lecturas:", error);
+                mostrarLecturas([]);
+            }
+        }
+
+        // Mostrar lecturas en la tabla
+        function mostrarLecturas(lecturas) {
+            let filas = "";
+
+            if (lecturas.length === 0) {
+                filas = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem; color: #ccc;"></i>
+                            <p class="text-muted mt-2">No hay lecturas registradas</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                lecturas.forEach(lectura => {
+                    let fecha = new Date(lectura.fechaLectura + 'T00:00:00').toLocaleDateString('es-SV');
+                    
+                    filas += `
+                        <tr>
+                            <td class="fw-semibold">${fecha}</td>
+                            <td>${parseFloat(lectura.lecturaAnterior).toFixed(2)}</td>
+                            <td>${parseFloat(lectura.lecturaActual).toFixed(2)}</td>
+                            <td><span class="badge bg-primary">${parseFloat(lectura.consumoM3).toFixed(2)}</span></td>
+                            <td class="text-center">
+                                <button onclick='modificarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-warning btn-sm btn-action">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+                                <button onclick='eliminarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-danger btn-sm btn-action">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            tblLecturas.innerHTML = filas;
+        }
+
+        // Botón nueva lectura
+        btnNuevaLectura.addEventListener('click', async () => {
+            if (usuarios.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin usuarios',
+                    text: 'No hay usuarios registrados en el sistema'
+                });
+                return;
+            }
+
+            accion = "nuevo";
+            idLectura = 0;
+            document.getElementById('tituloModal').innerHTML = '<i class="bi bi-plus-circle-fill me-2"></i>Nueva Lectura';
+            frmLectura.reset();
+            txtFecha.value = new Date().toISOString().split('T')[0];
+            
+            // Obtener última lectura
+            let usuario = usuarios[usuarioActualIndex];
+            try {
+                let response = await fetch(`/api/ultima_lectura?idUsuario=${usuario.idUsuario}`);
+                let data = await response.json();
+                txtLecturaAnterior.value = data.ultima || 0;
+            } catch (error) {
+                txtLecturaAnterior.value = 0;
+            }
+            
+            txtLecturaActual.value = "";
+            txtConsumo.value = "";
+            
+            modalLectura.show();
+        });
+
+        // Calcular consumo automáticamente
+        txtLecturaActual.addEventListener('input', () => {
+            let anterior = parseFloat(txtLecturaAnterior.value) || 0;
+            let actual = parseFloat(txtLecturaActual.value) || 0;
+            let consumo = actual - anterior;
+            txtConsumo.value = consumo >= 0 ? consumo.toFixed(2) : 0;
+        });
+
+        // Guardar lectura
+        frmLectura.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            let consumo = parseFloat(txtConsumo.value);
+            if (consumo < 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'La lectura actual no puede ser menor que la anterior'
+                });
+                return;
+            }
+
+            let usuario = usuarios[usuarioActualIndex];
+            let datos = {
+                accion,
+                idLectura,
+                idUsuario: usuario.idUsuario,
+                fechaLectura: txtFecha.value,
+                lecturaAnterior: parseFloat(txtLecturaAnterior.value),
+                lecturaActual: parseFloat(txtLecturaActual.value),
+                consumoM3: consumo
+            };
+
+            try {
+                let response = await fetch("/api/lecturas", {
+                    method: "POST",
+                    body: JSON.stringify(datos)
+                });
+
+                let respuesta = await response.json();
+
+                if (respuesta.msg === "ok") {
+                    // Cerrar modal
+                    modalLectura.hide();
+                    
+                    // Limpiar backdrop
+                    setTimeout(() => {
+                        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('overflow');
+                        document.body.style.removeProperty('padding-right');
+                    }, 200);
+                    
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+
+                    Toast.fire({
+                        icon: 'success',
+                        title: accion === "nuevo" ? 'Lectura agregada exitosamente' : 'Lectura modificada exitosamente'
+                    });
+
+                    // Recargar lecturas después de un pequeño delay
+                    setTimeout(async () => {
+                        await cargarLecturas(usuario.idUsuario);
+                    }, 300);
+                    
+                    // Resetear variables
+                    accion = "nuevo";
+                    idLectura = 0;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: respuesta.msg
+                    });
+                }
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo guardar la lectura'
+                });
+            }
+        });
+
+        // Modificar lectura
+        function modificarLectura(lectura) {
+            accion = "modificar";
+            idLectura = lectura.idLectura;
+            document.getElementById('tituloModal').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modificar Lectura';
+            
+            txtFecha.value = lectura.fechaLectura;
+            txtLecturaAnterior.value = lectura.lecturaAnterior;
+            txtLecturaActual.value = lectura.lecturaActual;
+            txtConsumo.value = lectura.consumoM3;
+            
+            modalLectura.show();
+        }
+
+        // Eliminar lectura
+        function eliminarLectura(lectura) {
+            Swal.fire({
+                title: '¿Eliminar lectura?',
+                html: `¿Está seguro de eliminar la lectura del ${new Date(lectura.fechaLectura + 'T00:00:00').toLocaleDateString('es-SV')}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    let datos = {
+                        accion: "eliminar",
+                        idLectura: lectura.idLectura
+                    };
+
+                    try {
+                        let response = await fetch("/api/lecturas", {
+                            method: "POST",
+                            body: JSON.stringify(datos)
+                        });
+
+                        let respuesta = await response.json();
+
+                        if (respuesta.msg === "ok") {
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                timerProgressBar: true
+                            });
+
+                            Toast.fire({
+                                icon: 'success',
+                                title: 'Lectura eliminada exitosamente'
+                            });
+
+                            let usuario = usuarios[usuarioActualIndex];
+                            await cargarLecturas(usuario.idUsuario);
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo eliminar la lectura'
+                        });
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -6,16 +6,11 @@
     <title>Dashboard - Hidrofact ACASAPE</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
     <style>
         .card-hover:hover {
             transform: translateY(-5px);
             transition: all 0.3s;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2) !important;
-        }
-        .ui-draggable {
-            position: fixed !important;
-            z-index: 9999;
         }
     </style>
 </head>
@@ -110,24 +105,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Tarjeta Tarifas -->
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100 card-hover" data-form="tarifas" style="cursor: pointer;">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-cash-coin text-success" style="font-size: 4rem;"></i>
+                        <h5 class="card-title mt-3">Tarifas</h5>
+                        <p class="card-text text-muted">Gestionar precios de servicios</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Contenedores para las ventanas modales -->
-    <div class="position-absolute" id="usuarios"></div>
-    <div class="position-absolute" id="busqueda_usuarios"></div>
-    <div class="position-absolute" id="detalle_usuario"></div>
-    <div class="position-absolute" id="lecturas"></div>
-    <div class="position-absolute" id="facturas"></div>
-    <div class="position-absolute" id="pagos"></div>
-    <div class="position-absolute" id="reportes"></div>
-
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     <script>
         // Verificar autenticación
         const usuario = sessionStorage.getItem('usuario');
@@ -170,48 +162,13 @@
             });
         });
 
-        // Función para abrir ventanas modales
-        function abrirVentana(form, callback) {
-            if ($(`#${form} > form`).length === 0) {
-                fetch(`/vistas?form=${form}`)
-                    .then(response => response.text())
-                    .then(ventana => {
-                        $(`#${form}`).html(ventana).draggable({
-                            handle: ".card-header",
-                            containment: "window"
-                        });
-                        cerrarVentana();
-                        if (callback) callback();
-                    })
-                    .catch(error => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'No se pudo cargar el módulo',
-                            confirmButtonColor: '#dc3545'
-                        });
-                    });
-            } else {
-                $(`#${form}`).show();
-            }
-        }
-
-        // Función para cerrar ventanas
-        function cerrarVentana() {
-            $('.btn-close').off('click').click(e => {
-                let form = e.target.dataset.form;
-                $(`#${form}`).hide();
-            });
-        }
-
         // Click en tarjetas
-document.querySelectorAll('[data-form]').forEach(card => {
-    card.addEventListener('click', (e) => {
-        const form = e.currentTarget.dataset.form;
-        // Redirigir a la página del módulo
-        window.location.href = `/modulos/${form}.html`;
-    });
-});
+        document.querySelectorAll('[data-form]').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const form = e.currentTarget.dataset.form;
+                window.location.href = `/modulos/${form}.html`;
+            });
+        });
     </script>
 </body>
 </html>
