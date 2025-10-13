@@ -100,9 +100,9 @@ class miServidor(SimpleHTTPRequestHandler):
         elif self.path == "/api/lecturas":
             resp = {"msg": crudLectura.administrar(datos)}
         
-        # Manejar modificación de tarifas
+        # Manejar CRUD de tarifas (modificado)
         elif self.path == "/api/tarifas":
-            resp = {"msg": crudTarifa.modificar(datos)}
+            resp = {"msg": crudTarifa.administrar(datos)}
         
         else:
             resp = {"status": "error", "msg": "Ruta no encontrada"}
