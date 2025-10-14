@@ -20,12 +20,10 @@ class miServidor(SimpleHTTPRequestHandler):
         path = url_parseada.path
         parametros = parse_qs(url_parseada.query)
 
-        # Redirigir raíz al login
         if self.path == "/":
             self.path = "/modulos/login.html"
             return SimpleHTTPRequestHandler.do_GET(self)
         
-        # API: Obtener usuarios
         if path == "/api/usuarios":
             usuarios = crudUsuario.consultar("")
             self.send_response(200)
@@ -33,8 +31,7 @@ class miServidor(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(usuarios).encode('utf-8'))
             return
-        
-        # API: Buscar usuarios
+
         if path == "/api/buscar_usuarios":
             buscar = parametros.get('q', [''])[0]
             usuarios = crudUsuario.consultar(buscar)
@@ -43,8 +40,7 @@ class miServidor(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(usuarios).encode('utf-8'))
             return
-        
-        # API: Obtener lecturas por usuario
+
         if path == "/api/lecturas":
             idUsuario = parametros.get('idUsuario', [0])[0]
             lecturas = crudLectura.consultar_por_usuario(idUsuario)
@@ -53,8 +49,7 @@ class miServidor(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(lecturas).encode('utf-8'))
             return
-        
-        # API: Obtener última lectura
+
         if path == "/api/ultima_lectura":
             idUsuario = parametros.get('idUsuario', [0])[0]
             ultima = crudLectura.obtener_ultima_lectura(idUsuario)
@@ -63,8 +58,7 @@ class miServidor(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"ultima": float(ultima)}).encode('utf-8'))
             return
-        
-        # API: Obtener tarifas
+
         if path == "/api/tarifas":
             tarifas = crudTarifa.consultar()
             self.send_response(200)
@@ -88,19 +82,15 @@ class miServidor(SimpleHTTPRequestHandler):
         datos = parse.unquote(datos)
         datos = json.loads(datos)
         
-        # Manejar login
         if self.path == "/login":
             resp = crudLogin.verificar(datos['usuario'], datos['clave'])
-        
-        # Manejar CRUD de usuarios
+
         elif self.path == "/api/usuarios":
             resp = {"msg": crudUsuario.administrar(datos)}
-        
-        # Manejar CRUD de lecturas
+
         elif self.path == "/api/lecturas":
             resp = {"msg": crudLectura.administrar(datos)}
-        
-        # Manejar CRUD de tarifas (modificado)
+
         elif self.path == "/api/tarifas":
             resp = {"msg": crudTarifa.administrar(datos)}
         

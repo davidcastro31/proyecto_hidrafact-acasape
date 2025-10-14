@@ -1,15 +1,9 @@
--- ============================================
--- BASE DE DATOS: HIDROFACT-ACASAPE
--- Sistema de Facturación de Agua Potable
--- ============================================
 
 CREATE DATABASE IF NOT EXISTS db_hidrofact;
 USE db_hidrofact;
 
--- ============================================
 -- TABLA: login
 -- Almacena credenciales del administrador
--- ============================================
 CREATE TABLE login (
     idLogin INT PRIMARY KEY AUTO_INCREMENT,
     usuario VARCHAR(50) UNIQUE NOT NULL,
@@ -17,10 +11,8 @@ CREATE TABLE login (
     rol VARCHAR(20) DEFAULT 'Administrador'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ============================================
 -- TABLA: usuarios
 -- Almacena información de clientes
--- ============================================
 CREATE TABLE usuarios (
     idUsuario INT PRIMARY KEY AUTO_INCREMENT,
     num_contador VARCHAR(20) UNIQUE NOT NULL,
@@ -32,10 +24,8 @@ CREATE TABLE usuarios (
     INDEX idx_estado (estado)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ============================================
 -- TABLA: lecturas
 -- Registra lecturas mensuales del contador
--- ============================================
 CREATE TABLE lecturas (
     idLectura INT PRIMARY KEY AUTO_INCREMENT,
     idUsuario INT NOT NULL,
@@ -48,10 +38,8 @@ CREATE TABLE lecturas (
     INDEX idx_fecha (fechaLectura)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ============================================
 -- TABLA: facturas
 -- Almacena facturas generadas
--- ============================================
 CREATE TABLE facturas (
     idFactura INT PRIMARY KEY AUTO_INCREMENT,
     idUsuario INT NOT NULL,
@@ -70,10 +58,8 @@ CREATE TABLE facturas (
     INDEX idx_fecha_emision (fechaEmision)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ============================================
 -- TABLA: pagos
 -- Registra pagos realizados
--- ============================================
 CREATE TABLE pagos (
     idPago INT PRIMARY KEY AUTO_INCREMENT,
     idFactura INT NOT NULL,
@@ -85,10 +71,8 @@ CREATE TABLE pagos (
     INDEX idx_fecha (fechaPago)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ============================================
 -- TABLA: tarifas
 -- Almacena precios de servicios
--- ============================================
 CREATE TABLE tarifas (
     idTarifa INT PRIMARY KEY AUTO_INCREMENT,
     concepto VARCHAR(100) UNIQUE NOT NULL,

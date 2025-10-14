@@ -1,20 +1,14 @@
--- ============================================
--- DATOS INICIALES - HIDROFACT-ACASAPE
--- ============================================
 
 USE db_hidrofact;
 
--- ============================================
+
 -- Usuario administrador por defecto
 -- Usuario: admin
 -- Contraseña: admin123
--- ============================================
 INSERT INTO login (usuario, clave, rol) 
 VALUES ('admin', 'admin123', 'Administrador');
 
--- ============================================
--- Tarifas del sistema según Excel
--- ============================================
+-- Tarifas del sistema
 INSERT INTO tarifas (concepto, precioUnitario) VALUES
 ('CUOTA UNICA 1-5m³', 7.00),
 ('M³ ADICIONAL', 0.50),
@@ -26,9 +20,6 @@ INSERT INTO tarifas (concepto, precioUnitario) VALUES
 ('CUOTA MENSUAL (NUEVA ACOMETIDA)', 15.00),
 ('PRIMA POR NUEVA ACOMETIDA', 200.00);
 
--- ============================================
 -- Usuario de ejemplo (opcional)
--- Puedes eliminarlo o modificarlo
--- ============================================
 INSERT INTO usuarios (num_contador, nombre, correo, estado) 
 VALUES ('22028184', 'GLORIA LETICIA HIDALGO VAZQUEZ', 'gloria@example.com', 'Activo');
