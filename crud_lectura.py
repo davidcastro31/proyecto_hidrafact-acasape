@@ -58,6 +58,7 @@ class crud_lectura:
                 datos['lecturaActual'],
                 datos['consumoM3']
             )
+            return db.ejecutar(sql, valores)
         
         elif datos['accion'] == "modificar":
             sql = """
@@ -72,9 +73,30 @@ class crud_lectura:
                 datos['consumoM3'],
                 datos['idLectura']
             )
+            
+            resultado = db.ejecutar(sql, valores)
+            
+            # Si se modificó correctamente, actualizar la factura asociada
+            if resultado == "ok":
+                try:
+                    import crud_factura
+                    crudFactura = crud_factura.crud_factura()
+                    crudFactura.actualizar_factura_desde_lectura(datos['idLectura'], datos['consumoM3'])
+                except Exception as e:
+                    print(f"Error al actualizar factura: {e}")
+            
+            return resultado
         
         elif datos['accion'] == "eliminar":
+            # Verificar si hay factura asociada
+            sql_check = f"SELECT idFactura FROM facturas WHERE idLectura = {datos['idLectura']}"
+            resultado_check = db.consultar(sql_check)
+            
+            if len(resultado_check) > 0:
+                return "No se puede eliminar una lectura que tiene una factura asociada. Elimine primero la factura."
+            
             sql = "DELETE FROM lecturas WHERE idLectura=%s"
             valores = (datos['idLectura'],)
+            return db.ejecutar(sql, valores)
         
-        return db.ejecutar(sql, valores)
+        return "Acción no reconocida"

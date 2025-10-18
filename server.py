@@ -6,6 +6,7 @@ import crud_login
 import crud_usuario
 import crud_lectura
 import crud_tarifa
+import crud_factura
 
 port = 3000
 
@@ -13,6 +14,7 @@ crudLogin = crud_login.crud_login()
 crudUsuario = crud_usuario.crud_usuario()
 crudLectura = crud_lectura.crud_lectura()
 crudTarifa = crud_tarifa.crud_tarifa()
+crudFactura = crud_factura.crud_factura()
 
 class miServidor(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -66,6 +68,27 @@ class miServidor(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(tarifas).encode('utf-8'))
             return
+
+        if path == "/api/facturas":
+            idUsuario = parametros.get('idUsuario', [0])[0]
+            if idUsuario and idUsuario != '0':
+                facturas = crudFactura.consultar_por_usuario(idUsuario)
+            else:
+                facturas = crudFactura.consultar_todas()
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(facturas).encode('utf-8'))
+            return
+
+        if path == "/api/verificar_factura":
+            idLectura = parametros.get('idLectura', [0])[0]
+            existe = crudFactura.verificar_factura_existente(idLectura)
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"existe": existe}).encode('utf-8'))
+            return
         
         # Cargar módulos HTML
         if path == "/vistas":
@@ -93,6 +116,13 @@ class miServidor(SimpleHTTPRequestHandler):
 
         elif self.path == "/api/tarifas":
             resp = {"msg": crudTarifa.administrar(datos)}
+
+        elif self.path == "/api/facturas":
+            resultado = crudFactura.administrar(datos)
+            if isinstance(resultado, dict):
+                resp = resultado
+            else:
+                resp = {"msg": resultado}
         
         else:
             resp = {"status": "error", "msg": "Ruta no encontrada"}

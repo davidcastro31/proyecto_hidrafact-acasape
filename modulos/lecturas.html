@@ -326,10 +326,13 @@
                             <td>${parseFloat(lectura.lecturaActual).toFixed(2)}</td>
                             <td><span class="badge bg-primary">${parseFloat(lectura.consumoM3).toFixed(2)}</span></td>
                             <td class="text-center">
-                                <button onclick='modificarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-warning btn-sm btn-action">
+                                <button onclick='generarFactura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-success btn-sm btn-action" title="Generar Factura">
+                                    <i class="bi bi-receipt-cutoff"></i>
+                                </button>
+                                <button onclick='modificarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-warning btn-sm btn-action" title="Modificar">
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
-                                <button onclick='eliminarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-danger btn-sm btn-action">
+                                <button onclick='eliminarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-danger btn-sm btn-action" title="Eliminar">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>
                             </td>
@@ -527,6 +530,87 @@
                             icon: 'error',
                             title: 'Error',
                             text: 'No se pudo eliminar la lectura'
+                        });
+                    }
+                }
+            });
+        }
+
+        // Generar factura desde una lectura
+        async function generarFactura(lectura) {
+            let usuario = usuarios[usuarioActualIndex];
+            
+            Swal.fire({
+                title: '¿Generar factura?',
+                html: `
+                    <p>Se generará una factura para:</p>
+                    <strong>${usuario.nombre}</strong><br>
+                    <small>Consumo: ${parseFloat(lectura.consumoM3).toFixed(2)} m³</small><br>
+                    <small>Fecha: ${new Date(lectura.fechaLectura + 'T00:00:00').toLocaleDateString('es-SV')}</small>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, generar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        // Verificar si ya existe factura para esta lectura
+                        let checkResponse = await fetch(`/api/verificar_factura?idLectura=${lectura.idLectura}`);
+                        let check = await checkResponse.json();
+                        
+                        if (check.existe) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Factura ya existe',
+                                text: 'Esta lectura ya tiene una factura generada',
+                                confirmButtonColor: '#0d6efd'
+                            });
+                            return;
+                        }
+
+                        // Crear factura
+                        let datos = {
+                            accion: "generar_desde_lectura",
+                            idUsuario: usuario.idUsuario,
+                            idLectura: lectura.idLectura,
+                            consumoM3: parseFloat(lectura.consumoM3),
+                            fechaLectura: lectura.fechaLectura
+                        };
+
+                        let response = await fetch("/api/facturas", {
+                            method: "POST",
+                            body: JSON.stringify(datos)
+                        });
+
+                        let respuesta = await response.json();
+
+                        if (respuesta.msg === "ok") {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Factura generada!',
+                                html: `
+                                    Factura creada exitosamente<br>
+                                    <strong>Monto total: $${respuesta.montoTotal.toFixed(2)}</strong>
+                                `,
+                                confirmButtonColor: '#0d6efd'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: respuesta.msg,
+                                confirmButtonColor: '#dc3545'
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Error al generar factura:", error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de conexión',
+                            text: 'No se pudo generar la factura'
                         });
                     }
                 }
