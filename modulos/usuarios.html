@@ -104,6 +104,12 @@
                 
                 <!-- Botones derecha -->
                 <div class="d-flex gap-2 align-items-center">
+                    <select id="cboFiltroMorosidad" class="form-select form-select-sm" style="width: 180px;">
+                        <option value="">Todos</option>
+                        <option value="al_dia">✓ Al día</option>
+                        <option value="advertencia">⚠ Con advertencia</option>
+                        <option value="bloqueado">🚫 Bloqueados</option>
+                    </select>
                     <input type="text" id="txtBuscar" class="form-control form-control-sm" placeholder="Buscar usuario..." style="width: 250px;">
                     <button class="btn btn-light btn-sm fw-bold" id="btnAgregar">
                         <i class="bi bi-plus-circle-fill me-1"></i> Nuevo Usuario
@@ -126,12 +132,13 @@
                                 <th style="width: 150px;">N° Contador</th>
                                 <th>Correo Electrónico</th>
                                 <th style="width: 120px;" class="text-center">Estado</th>
+                                <th style="width: 150px;" class="text-center">Morosidad</th>
                                 <th style="width: 200px;" class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tblUsuarios">
                             <tr>
-                                <td colspan="6" class="text-center py-5">
+                                <td colspan="7" class="text-center py-5">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Cargando...</span>
                                     </div>
@@ -205,14 +212,48 @@
         let accion = "nuevo";
         let idUsuario = 0;
         let modalUsuario = new bootstrap.Modal(document.getElementById('modalUsuario'));
+        let usuariosOriginales = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             obtenerUsuarios();
         });
 
         txtBuscar.addEventListener('input', () => {
-            buscarUsuarios(txtBuscar.value);
+            aplicarFiltros();
         });
+
+        cboFiltroMorosidad.addEventListener('change', () => {
+            aplicarFiltros();
+        });
+
+        function aplicarFiltros() {
+            let termino = txtBuscar.value.toLowerCase();
+            let filtroMorosidad = cboFiltroMorosidad.value;
+            
+            let usuariosFiltrados = usuariosOriginales;
+            
+            // Filtrar por morosidad
+            if (filtroMorosidad === 'al_dia') {
+                usuariosFiltrados = usuariosFiltrados.filter(u => (u.facturas_vencidas || 0) === 0);
+            } else if (filtroMorosidad === 'advertencia') {
+                usuariosFiltrados = usuariosFiltrados.filter(u => {
+                    let vencidas = u.facturas_vencidas || 0;
+                    return vencidas >= 1 && vencidas < 3;
+                });
+            } else if (filtroMorosidad === 'bloqueado') {
+                usuariosFiltrados = usuariosFiltrados.filter(u => (u.facturas_vencidas || 0) >= 3);
+            }
+            
+            // Filtrar por búsqueda de texto
+            if (termino !== '') {
+                usuariosFiltrados = usuariosFiltrados.filter(u => 
+                    u.nombre.toLowerCase().includes(termino) || 
+                    u.num_contador.includes(termino)
+                );
+            }
+            
+            mostrarUsuarios(usuariosFiltrados);
+        }
 
         btnAgregar.addEventListener('click', () => {
             accion = "nuevo";
@@ -271,13 +312,8 @@
         async function obtenerUsuarios() {
             let response = await fetch("/api/usuarios");
             let usuarios = await response.json();
-            mostrarUsuarios(usuarios);
-        }
-
-        async function buscarUsuarios(termino) {
-            let response = await fetch(`/api/buscar_usuarios?q=${termino}`);
-            let usuarios = await response.json();
-            mostrarUsuarios(usuarios);
+            usuariosOriginales = usuarios;
+            aplicarFiltros();
         }
 
         function mostrarUsuarios(usuarios) {
@@ -286,7 +322,7 @@
             if (usuarios.length === 0) {
                 filas = `
                     <tr>
-                        <td colspan="6" class="text-center py-5">
+                        <td colspan="7" class="text-center py-5">
                             <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
                             <p class="text-muted mt-3">No se encontraron usuarios</p>
                         </td>
@@ -298,6 +334,22 @@
                         ? '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activo</span>' 
                         : '<span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>Inactivo</span>';
                     
+                    // Badge de morosidad
+                    let badgeMorosidad = '';
+                    let facturas_vencidas = usuario.facturas_vencidas || 0;
+                    
+                    if (facturas_vencidas >= 3) {
+                        badgeMorosidad = `<span class="badge bg-danger" style="font-size: 0.9rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>BLOQUEADO (${facturas_vencidas})
+                        </span>`;
+                    } else if (facturas_vencidas > 0) {
+                        badgeMorosidad = `<span class="badge bg-warning text-dark" style="font-size: 0.9rem;">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>Advertencia (${facturas_vencidas})
+                        </span>`;
+                    } else {
+                        badgeMorosidad = '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Al día</span>';
+                    }
+                    
                     filas += `
                         <tr>
                             <td class="fw-semibold text-muted">${usuario.idUsuario}</td>
@@ -305,6 +357,7 @@
                             <td><span class="badge bg-light text-dark">${usuario.num_contador}</span></td>
                             <td class="text-muted">${usuario.correo || '<em>Sin correo</em>'}</td>
                             <td class="text-center">${badgeEstado}</td>
+                            <td class="text-center">${badgeMorosidad}</td>
                             <td class="text-center">
                                 <button onclick='modificarUsuario(${JSON.stringify(usuario)})' class="btn btn-warning btn-sm btn-action" title="Modificar">
                                     <i class="bi bi-pencil-fill"></i>

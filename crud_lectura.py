@@ -6,11 +6,11 @@ db = crud_hidrofact.crud()
 
 class crud_lectura:
     def consultar_por_usuario(self, idUsuario):
-        """Obtiene todas las lecturas de un usuario específico"""
+        """Obtiene todas las lecturas de un usuario específico - Ordenadas por ID descendente (más reciente primero)"""
         sql = f"""
             SELECT * FROM lecturas 
             WHERE idUsuario={idUsuario}
-            ORDER BY fechaLectura DESC
+            ORDER BY idLectura DESC
         """
         resultado = db.consultar(sql)
         

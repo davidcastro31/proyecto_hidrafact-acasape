@@ -37,7 +37,7 @@ class crud_factura:
         return self.contar_facturas_vencidas(idUsuario) >= 3
     
     def consultar_por_usuario(self, idUsuario):
-        """Obtiene todas las facturas de un usuario específico"""
+        """Obtiene todas las facturas de un usuario específico - Ordenadas por ID descendente (más reciente primero)"""
         # Primero actualizar estados vencidos
         self.actualizar_estados_vencidos()
         
@@ -46,7 +46,7 @@ class crud_factura:
             FROM facturas f
             INNER JOIN usuarios u ON f.idUsuario = u.idUsuario
             WHERE f.idUsuario = {idUsuario}
-            ORDER BY f.fechaEmision DESC
+            ORDER BY f.idFactura DESC
         """
         resultado = db.consultar(sql)
         
@@ -66,7 +66,7 @@ class crud_factura:
         return facturas
     
     def consultar_todas(self):
-        """Obtiene todas las facturas del sistema"""
+        """Obtiene todas las facturas del sistema - Ordenadas por ID descendente (más reciente primero)"""
         # Primero actualizar estados vencidos
         self.actualizar_estados_vencidos()
         
@@ -74,7 +74,7 @@ class crud_factura:
             SELECT f.*, u.nombre, u.num_contador, u.correo
             FROM facturas f
             INNER JOIN usuarios u ON f.idUsuario = u.idUsuario
-            ORDER BY f.fechaEmision DESC
+            ORDER BY f.idFactura DESC
         """
         resultado = db.consultar(sql)
         

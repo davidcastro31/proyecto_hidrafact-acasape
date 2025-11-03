@@ -3,17 +3,44 @@ import crud_hidrofact
 db = crud_hidrofact.crud()
 
 class crud_usuario:
+    def actualizar_estados_facturas(self):
+        """Actualiza el estado de facturas vencidas antes de consultar"""
+        try:
+            sql_update = """
+                UPDATE facturas 
+                SET estado = 'Vencida'
+                WHERE estado = 'Pendiente' 
+                AND fechaVencimiento < CURDATE()
+            """
+            db.ejecutar(sql_update, ())
+        except Exception as e:
+            print(f"Error al actualizar estados: {e}")
+    
     def consultar(self, buscar=""):
-        """Consulta usuarios, permite búsqueda por nombre o número de contador"""
+        """Consulta usuarios con conteo de facturas vencidas"""
+        # Primero actualizar estados de facturas
+        self.actualizar_estados_facturas()
+        
         if buscar:
             sql = f"""
-                SELECT * FROM usuarios 
-                WHERE nombre LIKE '%{buscar}%' 
-                OR num_contador LIKE '%{buscar}%'
-                ORDER BY idUsuario
+                SELECT u.*, 
+                    (SELECT COUNT(*) FROM facturas f 
+                     WHERE f.idUsuario = u.idUsuario 
+                     AND f.estado = 'Vencida') as facturas_vencidas
+                FROM usuarios u
+                WHERE u.nombre LIKE '%{buscar}%' 
+                OR u.num_contador LIKE '%{buscar}%'
+                ORDER BY u.idUsuario
             """
         else:
-            sql = "SELECT * FROM usuarios ORDER BY idUsuario"
+            sql = """
+                SELECT u.*, 
+                    (SELECT COUNT(*) FROM facturas f 
+                     WHERE f.idUsuario = u.idUsuario 
+                     AND f.estado = 'Vencida') as facturas_vencidas
+                FROM usuarios u
+                ORDER BY u.idUsuario
+            """
         
         return db.consultar(sql)
     
