@@ -10,10 +10,10 @@ class crud_usuario:
                 SELECT * FROM usuarios 
                 WHERE nombre LIKE '%{buscar}%' 
                 OR num_contador LIKE '%{buscar}%'
-                ORDER BY nombre
+                ORDER BY idUsuario
             """
         else:
-            sql = "SELECT * FROM usuarios ORDER BY nombre"
+            sql = "SELECT * FROM usuarios ORDER BY idUsuario"
         
         return db.consultar(sql)
     

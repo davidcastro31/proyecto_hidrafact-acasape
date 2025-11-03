@@ -89,6 +89,19 @@ class miServidor(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"existe": existe}).encode('utf-8'))
             return
+
+        if path == "/api/verificar_bloqueo":
+            idUsuario = parametros.get('idUsuario', [0])[0]
+            bloqueado = crudFactura.usuario_bloqueado(int(idUsuario))
+            total_vencidas = crudFactura.contar_facturas_vencidas(int(idUsuario))
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "bloqueado": bloqueado,
+                "total_vencidas": total_vencidas
+            }).encode('utf-8'))
+            return
         
         # Cargar módulos HTML
         if path == "/vistas":

@@ -41,9 +41,14 @@
             transition: all 0.3s ease;
         }
         
-        .btn-action:hover {
+        .btn-action:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-action:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
         }
         
         .modal-content {
@@ -79,17 +84,14 @@
     <nav class="navbar navbar-dark">
         <div class="container-fluid">
             <div class="d-flex align-items-center w-100">
-                <!-- Flecha para regresar -->
                 <button class="btn btn-outline-light rounded-circle me-3" onclick="window.location.href='/index.html'">
                     <i class="bi bi-arrow-left"></i>
                 </button>
                 
-                <!-- Título centrado -->
                 <h4 class="text-white mb-0 flex-grow-1 text-center fw-bold">
                     <i class="bi bi-clipboard-data-fill me-2"></i>LECTURAS
                 </h4>
                 
-                <!-- Controles derecha -->
                 <div class="d-flex gap-2 align-items-center">
                     <button class="btn btn-outline-light btn-sm" id="btnAnterior" title="Usuario anterior">
                         <i class="bi bi-arrow-left-circle"></i>
@@ -220,7 +222,6 @@
         let idLectura = 0;
         let modalLectura = null;
 
-        // Cargar usuarios al iniciar
         document.addEventListener('DOMContentLoaded', async () => {
             modalLectura = new bootstrap.Modal(document.getElementById('modalLectura'));
             await cargarUsuarios();
@@ -228,11 +229,9 @@
                 mostrarUsuario(0);
             }
             
-            // Fecha actual por defecto
             txtFecha.value = new Date().toISOString().split('T')[0];
         });
 
-        // Cargar todos los usuarios
         async function cargarUsuarios() {
             try {
                 let response = await fetch("/api/usuarios");
@@ -243,7 +242,6 @@
             }
         }
 
-        // Buscar usuario
         txtBuscarUsuario.addEventListener('input', async () => {
             let termino = txtBuscarUsuario.value;
             try {
@@ -258,7 +256,6 @@
             }
         });
 
-        // Navegación entre usuarios
         btnAnterior.addEventListener('click', () => {
             if (usuarioActualIndex > 0) {
                 usuarioActualIndex--;
@@ -273,7 +270,6 @@
             }
         });
 
-        // Mostrar información del usuario y sus lecturas
         async function mostrarUsuario(index) {
             usuarioActualIndex = index;
             let usuario = usuarios[index];
@@ -283,27 +279,75 @@
             txtContador.textContent = usuario.num_contador;
             txtCorreo.textContent = usuario.correo || 'Sin correo';
             
-            // Cargar lecturas del usuario
+            // Verificar si el usuario está bloqueado
+            await verificarBloqueoUsuario(usuario.idUsuario);
+            
             await cargarLecturas(usuario.idUsuario);
         }
 
-        // Cargar lecturas de un usuario
+        async function verificarBloqueoUsuario(idUsuario) {
+            try {
+                let response = await fetch(`/api/verificar_bloqueo?idUsuario=${idUsuario}`);
+                let resultado = await response.json();
+                
+                let infoCard = document.getElementById('infoUsuario');
+                
+                // Eliminar alerta previa si existe
+                let alertaPrevia = infoCard.querySelector('.alerta-estado-usuario');
+                if (alertaPrevia) {
+                    alertaPrevia.remove();
+                }
+                
+                if (resultado.bloqueado) {
+                    // Usuario BLOQUEADO - Cambiar a rojo y agregar alerta
+                    infoCard.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                    infoCard.querySelector('.row').insertAdjacentHTML('beforeend', `
+                        <div class="col-md-12 mt-3 alerta-estado-usuario">
+                            <div class="alert alert-danger mb-0 d-flex align-items-center" style="background-color: rgba(255,255,255,0.2); border: 2px solid white;">
+                                <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong>USUARIO BLOQUEADO</strong> - ${resultado.total_vencidas} facturas vencidas
+                                    <br><small>No se pueden generar nuevas facturas hasta pagar al menos una factura vencida</small>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                } else if (resultado.total_vencidas > 0) {
+                    // Usuario con facturas vencidas pero no bloqueado - Amarillo
+                    infoCard.style.background = 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)';
+                    infoCard.querySelector('.row').insertAdjacentHTML('beforeend', `
+                        <div class="col-md-12 mt-3 alerta-estado-usuario">
+                            <div class="alert alert-warning mb-0 d-flex align-items-center" style="background-color: rgba(255,255,255,0.3); border: 2px solid white; color: #000;">
+                                <i class="bi bi-exclamation-circle-fill me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong>ADVERTENCIA</strong> - ${resultado.total_vencidas} factura(s) vencida(s)
+                                    <br><small>Las nuevas facturas incluirán mora adicional</small>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                } else {
+                    // Usuario OK - Azul normal
+                    infoCard.style.background = 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)';
+                }
+            } catch (error) {
+                console.error("Error al verificar bloqueo:", error);
+            }
+        }
+
         async function cargarLecturas(idUsuario) {
             try {
                 let response = await fetch(`/api/lecturas?idUsuario=${idUsuario}`);
                 let texto = await response.text();
-                console.log("Respuesta del servidor:", texto);
-                
                 let lecturas = texto ? JSON.parse(texto) : [];
-                mostrarLecturas(lecturas);
+                await mostrarLecturas(lecturas);
             } catch (error) {
                 console.error("Error al cargar lecturas:", error);
-                mostrarLecturas([]);
+                await mostrarLecturas([]);
             }
         }
 
-        // Mostrar lecturas en la tabla
-        function mostrarLecturas(lecturas) {
+        async function mostrarLecturas(lecturas) {
             let filas = "";
 
             if (lecturas.length === 0) {
@@ -316,8 +360,44 @@
                     </tr>
                 `;
             } else {
-                lecturas.forEach(lectura => {
+                // Para cada lectura, verificar si tiene factura
+                for (let lectura of lecturas) {
                     let fecha = new Date(lectura.fechaLectura + 'T00:00:00').toLocaleDateString('es-SV');
+                    
+                    // Verificar si esta lectura tiene factura
+                    let tieneFactura = false;
+                    try {
+                        let response = await fetch(`/api/verificar_factura?idLectura=${lectura.idLectura}`);
+                        let resultado = await response.json();
+                        tieneFactura = resultado.existe;
+                    } catch (error) {
+                        console.error("Error al verificar factura:", error);
+                    }
+                    
+                    // Botones dinámicos según si tiene factura
+                    let btnGenerar = tieneFactura 
+                        ? `<button class="btn btn-success btn-sm btn-action" disabled title="Ya tiene factura generada">
+                               <i class="bi bi-receipt-cutoff"></i> Factura Generada
+                           </button>`
+                        : `<button onclick='generarFactura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-success btn-sm btn-action" title="Generar Factura">
+                               <i class="bi bi-receipt-cutoff"></i> Generar Factura
+                           </button>`;
+                    
+                    let btnModificar = tieneFactura
+                        ? `<button class="btn btn-warning btn-sm btn-action" disabled title="No se puede modificar: tiene factura asociada">
+                               <i class="bi bi-lock-fill"></i> Bloqueada
+                           </button>`
+                        : `<button onclick='modificarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-warning btn-sm btn-action" title="Modificar">
+                               <i class="bi bi-pencil-fill"></i> Modificar
+                           </button>`;
+                    
+                    let btnEliminar = tieneFactura
+                        ? `<button class="btn btn-danger btn-sm btn-action" disabled title="No se puede eliminar: tiene factura asociada">
+                               <i class="bi bi-lock-fill"></i>
+                           </button>`
+                        : `<button onclick='eliminarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-danger btn-sm btn-action" title="Eliminar">
+                               <i class="bi bi-trash-fill"></i> Eliminar
+                           </button>`;
                     
                     filas += `
                         <tr>
@@ -326,25 +406,18 @@
                             <td>${parseFloat(lectura.lecturaActual).toFixed(2)}</td>
                             <td><span class="badge bg-primary">${parseFloat(lectura.consumoM3).toFixed(2)}</span></td>
                             <td class="text-center">
-                                <button onclick='generarFactura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-success btn-sm btn-action" title="Generar Factura">
-                                    <i class="bi bi-receipt-cutoff"></i>
-                                </button>
-                                <button onclick='modificarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-warning btn-sm btn-action" title="Modificar">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </button>
-                                <button onclick='eliminarLectura(${JSON.stringify(lectura).replace(/'/g, "&#39;")})' class="btn btn-danger btn-sm btn-action" title="Eliminar">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
+                                ${btnGenerar}
+                                ${btnModificar}
+                                ${btnEliminar}
                             </td>
                         </tr>
                     `;
-                });
+                }
             }
 
             tblLecturas.innerHTML = filas;
         }
 
-        // Botón nueva lectura
         btnNuevaLectura.addEventListener('click', async () => {
             if (usuarios.length === 0) {
                 Swal.fire({
@@ -361,7 +434,6 @@
             frmLectura.reset();
             txtFecha.value = new Date().toISOString().split('T')[0];
             
-            // Obtener última lectura
             let usuario = usuarios[usuarioActualIndex];
             try {
                 let response = await fetch(`/api/ultima_lectura?idUsuario=${usuario.idUsuario}`);
@@ -377,7 +449,6 @@
             modalLectura.show();
         });
 
-        // Calcular consumo automáticamente
         txtLecturaActual.addEventListener('input', () => {
             let anterior = parseFloat(txtLecturaAnterior.value) || 0;
             let actual = parseFloat(txtLecturaActual.value) || 0;
@@ -385,7 +456,6 @@
             txtConsumo.value = consumo >= 0 ? consumo.toFixed(2) : 0;
         });
 
-        // Guardar lectura
         frmLectura.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -419,10 +489,8 @@
                 let respuesta = await response.json();
 
                 if (respuesta.msg === "ok") {
-                    // Cerrar modal
                     modalLectura.hide();
                     
-                    // Limpiar backdrop
                     setTimeout(() => {
                         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
                         document.body.classList.remove('modal-open');
@@ -443,12 +511,10 @@
                         title: accion === "nuevo" ? 'Lectura agregada exitosamente' : 'Lectura modificada exitosamente'
                     });
 
-                    // Recargar lecturas después de un pequeño delay
                     setTimeout(async () => {
                         await cargarLecturas(usuario.idUsuario);
                     }, 300);
                     
-                    // Resetear variables
                     accion = "nuevo";
                     idLectura = 0;
                 } else {
@@ -468,7 +534,6 @@
             }
         });
 
-        // Modificar lectura
         function modificarLectura(lectura) {
             accion = "modificar";
             idLectura = lectura.idLectura;
@@ -482,7 +547,6 @@
             modalLectura.show();
         }
 
-        // Eliminar lectura
         function eliminarLectura(lectura) {
             Swal.fire({
                 title: '¿Eliminar lectura?',
@@ -524,6 +588,12 @@
 
                             let usuario = usuarios[usuarioActualIndex];
                             await cargarLecturas(usuario.idUsuario);
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: respuesta.msg
+                            });
                         }
                     } catch (error) {
                         Swal.fire({
@@ -536,10 +606,35 @@
             });
         }
 
-        // Generar factura desde una lectura
         async function generarFactura(lectura) {
             let usuario = usuarios[usuarioActualIndex];
             
+            // Verificar si el usuario está bloqueado ANTES de mostrar el diálogo
+            try {
+                let responseBloqueo = await fetch(`/api/verificar_bloqueo?idUsuario=${usuario.idUsuario}`);
+                let bloqueo = await responseBloqueo.json();
+                
+                if (bloqueo.bloqueado) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '🚫 Usuario Bloqueado',
+                        html: `
+                            <p class="mb-3"><strong>${usuario.nombre}</strong> tiene <span class="badge bg-danger">${bloqueo.total_vencidas} facturas vencidas</span></p>
+                            <p class="text-danger">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                No se pueden generar nuevas facturas hasta que se pague al menos una factura vencida.
+                            </p>
+                        `,
+                        confirmButtonColor: '#dc3545',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return; // Detener ejecución
+                }
+            } catch (error) {
+                console.error("Error al verificar bloqueo:", error);
+            }
+            
+            // Si no está bloqueado, continuar con el proceso normal
             Swal.fire({
                 title: '¿Generar factura?',
                 html: `
@@ -557,21 +652,6 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        // Verificar si ya existe factura para esta lectura
-                        let checkResponse = await fetch(`/api/verificar_factura?idLectura=${lectura.idLectura}`);
-                        let check = await checkResponse.json();
-                        
-                        if (check.existe) {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Factura ya existe',
-                                text: 'Esta lectura ya tiene una factura generada',
-                                confirmButtonColor: '#0d6efd'
-                            });
-                            return;
-                        }
-
-                        // Crear factura
                         let datos = {
                             accion: "generar_desde_lectura",
                             idUsuario: usuario.idUsuario,
@@ -588,22 +668,41 @@
                         let respuesta = await response.json();
 
                         if (respuesta.msg === "ok") {
+                            let mensajeMora = respuesta.mora > 0 
+                                ? `<br><small class="text-danger">⚠️ Se aplicó mora de ${respuesta.mora.toFixed(2)} por facturas vencidas</small>`
+                                : '';
+                            
                             Swal.fire({
                                 icon: 'success',
                                 title: '¡Factura generada!',
                                 html: `
                                     Factura creada exitosamente<br>
-                                    <strong>Monto total: $${respuesta.montoTotal.toFixed(2)}</strong>
+                                    <strong>Monto total: ${respuesta.montoTotal.toFixed(2)}</strong>
+                                    ${mensajeMora}
                                 `,
                                 confirmButtonColor: '#0d6efd'
                             });
+                            
+                            // Recargar lecturas y verificar bloqueo
+                            await verificarBloqueoUsuario(usuario.idUsuario);
+                            await cargarLecturas(usuario.idUsuario);
                         } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: respuesta.msg,
-                                confirmButtonColor: '#dc3545'
-                            });
+                            // Verificar si es un mensaje de bloqueo
+                            if (respuesta.msg && respuesta.msg.includes("BLOQUEADO")) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '🚫 Usuario Bloqueado',
+                                    html: `<p class="text-danger">${respuesta.msg}</p>`,
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: respuesta.msg || respuesta,
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
                         }
                     } catch (error) {
                         console.error("Error al generar factura:", error);

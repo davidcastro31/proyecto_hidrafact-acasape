@@ -61,6 +61,14 @@ class crud_lectura:
             return db.ejecutar(sql, valores)
         
         elif datos['accion'] == "modificar":
+            # Verificar si tiene factura asociada (NO SE PUEDE MODIFICAR)
+            sql_check = f"SELECT idFactura FROM facturas WHERE idLectura = {datos['idLectura']}"
+            resultado_check = db.consultar(sql_check)
+            
+            if len(resultado_check) > 0:
+                return "No se puede modificar una lectura que tiene una factura asociada. Elimine primero la factura."
+            
+            # Si no tiene factura, permitir modificación
             sql = """
                 UPDATE lecturas 
                 SET fechaLectura=%s, lecturaAnterior=%s, lecturaActual=%s, consumoM3=%s
@@ -74,21 +82,10 @@ class crud_lectura:
                 datos['idLectura']
             )
             
-            resultado = db.ejecutar(sql, valores)
-            
-            # Si se modificó correctamente, actualizar la factura asociada
-            if resultado == "ok":
-                try:
-                    import crud_factura
-                    crudFactura = crud_factura.crud_factura()
-                    crudFactura.actualizar_factura_desde_lectura(datos['idLectura'], datos['consumoM3'])
-                except Exception as e:
-                    print(f"Error al actualizar factura: {e}")
-            
-            return resultado
+            return db.ejecutar(sql, valores)
         
         elif datos['accion'] == "eliminar":
-            # Verificar si hay factura asociada
+            # Verificar si hay factura asociada (NO SE PUEDE ELIMINAR)
             sql_check = f"SELECT idFactura FROM facturas WHERE idLectura = {datos['idLectura']}"
             resultado_check = db.consultar(sql_check)
             
