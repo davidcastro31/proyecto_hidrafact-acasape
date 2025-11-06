@@ -151,4 +151,6 @@ print("Abre tu navegador en: http://localhost:3000")
 print("Usuario: admin | Contraseña: admin123")
 print("=" * 50)
 server = HTTPServer(("localhost", port), miServidor)
-server.serve_forever()
+server.serve_forever() 
+
+#solo comprobar
