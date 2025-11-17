@@ -1,1 +1,3 @@
 mysql-connector-python==8.0.33
+reportlab==4.0.9
+Pillow==10.1.0

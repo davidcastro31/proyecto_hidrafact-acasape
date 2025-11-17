@@ -7,6 +7,8 @@ import crud_usuario
 import crud_lectura
 import crud_tarifa
 import crud_factura
+from generador_recibo import generar_pdf_factura
+import os
 
 port = 3000
 
@@ -102,6 +104,52 @@ class miServidor(SimpleHTTPRequestHandler):
                 "total_vencidas": total_vencidas
             }).encode('utf-8'))
             return
+
+        # NUEVO: Generar PDF de factura
+        if path == "/api/generar_pdf_factura":
+            idFactura = int(parametros.get('idFactura', [0])[0])
+            try:
+                filename = generar_pdf_factura(idFactura, crudFactura, crudUsuario, crudLectura)
+                if filename and os.path.exists(filename):
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": True,
+                        "filename": filename
+                    }).encode('utf-8'))
+                else:
+                    self.send_response(404)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "error": "No se pudo generar el PDF"
+                    }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": False,
+                    "error": str(e)
+                }).encode('utf-8'))
+            return
+
+        # NUEVO: Descargar PDF generado
+        if path.startswith("/recibos/"):
+            try:
+                filepath = path[1:]  # Remover el / inicial
+                if os.path.exists(filepath):
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/pdf')
+                    self.send_header('Content-Disposition', f'attachment; filename="{os.path.basename(filepath)}"')
+                    self.end_headers()
+                    with open(filepath, 'rb') as f:
+                        self.wfile.write(f.read())
+                    return
+            except Exception as e:
+                print(f"Error al servir PDF: {e}")
         
         # Cargar módulos HTML
         if path == "/vistas":
@@ -151,6 +199,4 @@ print("Abre tu navegador en: http://localhost:3000")
 print("Usuario: admin | Contraseña: admin123")
 print("=" * 50)
 server = HTTPServer(("localhost", port), miServidor)
-server.serve_forever() 
-
-#solo comprobar
+server.serve_forever()
