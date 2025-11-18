@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background-color: #0d6efd !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .table thead th {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        
+        .table tbody tr {
+            cursor: pointer;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #e7f3ff;
+        }
+        
+        .info-card {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .total-card {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        
+        .total-amount {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        #txtBuscarUsuario {
+            border-radius: 20px;
+            padding-left: 2.5rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 10px center;
+        }
+
+        .factura-row {
+            transition: all 0.3s ease;
+        }
+
+        .factura-row.selected {
+            background-color: #d4edda !important;
+            border-left: 4px solid #28a745;
+        }
+
+        .checkbox-custom {
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center w-100">
+                <button class="btn btn-outline-light rounded-circle me-3" onclick="window.location.href='/index.html'">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                
+                <h4 class="text-white mb-0 flex-grow-1 text-center fw-bold">
+                    <i class="bi bi-credit-card-fill me-2"></i>PAGOS
+                </h4>
+                
+                <input type="text" id="txtBuscarUsuario" class="form-control form-control-sm" placeholder="Buscar usuario..." style="width: 250px;">
+            </div>
+        </div>
+    </nav>
+
+    <!-- Vista 1: Lista de Usuarios -->
+    <div class="container-fluid mt-4 px-4" id="vistaUsuarios">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Seleccione un Usuario</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">#</th>
+                                <th>Nombre Completo</th>
+                                <th style="width: 150px;">N° Contador</th>
+                                <th>Correo Electrónico</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblUsuarios">
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    Cargando usuarios...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista 2: Facturas del Usuario para Pago -->
+    <div class="container-fluid mt-4 px-4" id="vistaPagos" style="display: none;">
+        <button class="btn btn-secondary mb-3" onclick="volverAUsuarios()">
+            <i class="bi bi-arrow-left"></i> Volver a Usuarios
+        </button>
+
+        <!-- Info del usuario -->
+        <div class="info-card">
+            <div class="row">
+                <div class="col-md-3">
+                    <h6 class="mb-1">N° Usuario</h6>
+                    <h5 class="fw-bold" id="txtIdUsuario">-</h5>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-1">Nombre</h6>
+                    <h5 class="fw-bold" id="txtNombreUsuario">-</h5>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-1">N° Contador</h6>
+                    <h5 class="fw-bold" id="txtContador">-</h5>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-1">Correo</h6>
+                    <h5 class="fw-bold" id="txtCorreo">-</h5>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Tabla de facturas -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Facturas Pendientes</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;" class="text-center">
+                                            <input type="checkbox" id="chkSelectAll" class="checkbox-custom" title="Seleccionar todas">
+                                        </th>
+                                        <th>N° Factura</th>
+                                        <th>Tipo</th>
+                                        <th>Fecha Emisión</th>
+                                        <th>Vencimiento</th>
+                                        <th>Estado</th>
+                                        <th>Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tblFacturasPendientes">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            No hay facturas pendientes
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de pago -->
+            <div class="col-md-4">
+                <div class="total-card">
+                    <h5><i class="bi bi-calculator"></i> TOTAL A PAGAR</h5>
+                    <div class="total-amount" id="totalPagar">$0.00</div>
+                    <small class="d-block mb-3" id="facturas Seleccionadas">0 factura(s) seleccionada(s)</small>
+                    
+                    <div class="mb-3 text-start">
+                        <label class="form-label text-white fw-bold">Método de Pago:</label>
+                        <select class="form-select" id="cboMetodoPago">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-light btn-lg w-100 fw-bold" id="btnRegistrarPago" disabled>
+                        <i class="bi bi-check-circle-fill me-2"></i>Registrar Pago
+                    </button>
+                </div>
+
+                <!-- Información adicional -->
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary"></i> Información</h6>
+                        <ul class="small text-muted ps-3">
+                            <li>Seleccione las facturas a pagar con el checkbox</li>
+                            <li>El total se calcula automáticamente</li>
+                            <li>Las facturas vencidas incluyen mora</li>
+                            <li>El comprobante se generará automáticamente</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let usuarios = [];
+        let usuarioSeleccionado = null;
+        let facturasSeleccionadas = [];
+        let todasLasFacturas = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await cargarUsuarios();
+        });
+
+        // Cargar usuarios
+        async function cargarUsuarios() {
+            try {
+                let response = await fetch("/api/usuarios");
+                usuarios = await response.json();
+                mostrarUsuarios(usuarios);
+            } catch (error) {
+                console.error("Error al cargar usuarios:", error);
+            }
+        }
+
+        // Buscar usuarios
+        txtBuscarUsuario.addEventListener('input', async () => {
+            let termino = txtBuscarUsuario.value;
+            try {
+                let response = await fetch(`/api/buscar_usuarios?q=${termino}`);
+                usuarios = await response.json();
+                mostrarUsuarios(usuarios);
+            } catch (error) {
+                console.error("Error al buscar:", error);
+            }
+        });
+
+        // Mostrar usuarios en tabla
+        function mostrarUsuarios(usuarios) {
+            let filas = "";
+
+            if (usuarios.length === 0) {
+                filas = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem; color: #ccc;"></i>
+                            <p class="text-muted mt-2">No se encontraron usuarios</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                usuarios.forEach(usuario => {
+                    filas += `
+                        <tr onclick='seleccionarUsuario(${JSON.stringify(usuario).replace(/'/g, "&#39;")})'>
+                            <td class="fw-semibold text-muted">${usuario.idUsuario}</td>
+                            <td class="fw-semibold">${usuario.nombre}</td>
+                            <td><span class="badge bg-light text-dark">${usuario.num_contador}</span></td>
+                            <td class="text-muted">${usuario.correo || '<em>Sin correo</em>'}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            tblUsuarios.innerHTML = filas;
+        }
+
+        // Seleccionar usuario
+        async function seleccionarUsuario(usuario) {
+            usuarioSeleccionado = usuario;
+            facturasSeleccionadas = [];
+            
+            txtIdUsuario.textContent = usuario.idUsuario;
+            txtNombreUsuario.textContent = usuario.nombre;
+            txtContador.textContent = usuario.num_contador;
+            txtCorreo.textContent = usuario.correo || 'Sin correo';
+            
+            document.getElementById('vistaUsuarios').style.display = 'none';
+            document.getElementById('vistaPagos').style.display = 'block';
+            
+            await cargarFacturasPendientes(usuario.idUsuario);
+        }
+
+        // Volver a usuarios
+        function volverAUsuarios() {
+            document.getElementById('vistaUsuarios').style.display = 'block';
+            document.getElementById('vistaPagos').style.display = 'none';
+            usuarioSeleccionado = null;
+            facturasSeleccionadas = [];
+            actualizarTotal();
+        }
+
+        // Cargar facturas pendientes
+        async function cargarFacturasPendientes(idUsuario) {
+            try {
+                let response = await fetch(`/api/facturas_pendientes?idUsuario=${idUsuario}`);
+                todasLasFacturas = await response.json();
+                mostrarFacturasPendientes(todasLasFacturas);
+            } catch (error) {
+                console.error("Error al cargar facturas:", error);
+                mostrarFacturasPendientes([]);
+            }
+        }
+
+        // Mostrar facturas pendientes
+        function mostrarFacturasPendientes(facturas) {
+            let filas = "";
+
+            if (facturas.length === 0) {
+                filas = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                            <p class="text-success mt-2 fw-bold">¡No hay facturas pendientes!</p>
+                            <small class="text-muted">Este usuario está al día con sus pagos</small>
+                        </td>
+                    </tr>
+                `;
+                btnRegistrarPago.disabled = true;
+            } else {
+                facturas.forEach((factura, index) => {
+                    let fechaEmision = new Date(factura.fechaEmision + 'T00:00:00').toLocaleDateString('es-SV');
+                    let fechaVencimiento = new Date(factura.fechaVencimiento + 'T00:00:00').toLocaleDateString('es-SV');
+                    
+                    let badgeEstado = factura.estado === 'Vencida'
+                        ? '<span class="badge bg-danger">Vencida</span>'
+                        : '<span class="badge bg-warning text-dark">Pendiente</span>';
+                    
+                    filas += `
+                        <tr class="factura-row" data-factura-id="${factura.idFactura}">
+                            <td class="text-center">
+                                <input type="checkbox" class="checkbox-custom chk-factura" 
+                                    data-factura='${JSON.stringify(factura).replace(/'/g, "&#39;")}' 
+                                    onchange="toggleFactura(this)">
+                            </td>
+                            <td class="fw-semibold">${factura.idFactura}</td>
+                            <td>${factura.tipoFactura}</td>
+                            <td>${fechaEmision}</td>
+                            <td>${fechaVencimiento}</td>
+                            <td>${badgeEstado}</td>
+                            <td><span class="badge bg-primary" style="font-size: 1rem;">$${parseFloat(factura.montoTotal).toFixed(2)}</span></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            tblFacturasPendientes.innerHTML = filas;
+            
+            // Reset checkbox "Seleccionar todas"
+            document.getElementById('chkSelectAll').checked = false;
+        }
+
+        // Seleccionar todas las facturas
+        document.getElementById('chkSelectAll').addEventListener('change', function() {
+            let checkboxes = document.querySelectorAll('.chk-factura');
+            checkboxes.forEach(chk => {
+                chk.checked = this.checked;
+                toggleFactura(chk);
+            });
+        });
+
+        // Toggle selección de factura
+        function toggleFactura(checkbox) {
+            let factura = JSON.parse(checkbox.dataset.factura);
+            let row = checkbox.closest('tr');
+            
+            if (checkbox.checked) {
+                // Agregar factura
+                if (!facturasSeleccionadas.find(f => f.idFactura === factura.idFactura)) {
+                    facturasSeleccionadas.push(factura);
+                    row.classList.add('selected');
+                }
+            } else {
+                // Remover factura
+                facturasSeleccionadas = facturasSeleccionadas.filter(f => f.idFactura !== factura.idFactura);
+                row.classList.remove('selected');
+            }
+            
+            actualizarTotal();
+        }
+
+        // Actualizar total
+        function actualizarTotal() {
+            let total = 0;
+            facturasSeleccionadas.forEach(f => {
+                total += parseFloat(f.montoTotal);
+            });
+            
+            document.getElementById('totalPagar').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('facturasSeleccionadas').textContent = 
+                `${facturasSeleccionadas.length} factura(s) seleccionada(s)`;
+            
+            btnRegistrarPago.disabled = facturasSeleccionadas.length === 0;
+        }
+
+        // Registrar pago
+        btnRegistrarPago.addEventListener('click', async () => {
+            if (facturasSeleccionadas.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin facturas',
+                    text: 'Debe seleccionar al menos una factura',
+                    confirmButtonColor: '#0d6efd'
+                });
+                return;
+            }
+
+            let total = 0;
+            facturasSeleccionadas.forEach(f => total += parseFloat(f.montoTotal));
+
+            Swal.fire({
+                title: '¿Registrar pago?',
+                html: `
+                    <p><strong>Usuario:</strong> ${usuarioSeleccionado.nombre}</p>
+                    <p><strong>Facturas a pagar:</strong> ${facturasSeleccionadas.length}</p>
+                    <p><strong>Total:</strong> <span class="badge bg-success" style="font-size: 1.2rem;">$${total.toFixed(2)}</span></p>
+                    <p><strong>Método:</strong> ${cboMetodoPago.value}</p>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, registrar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await procesarPago();
+                }
+            });
+        });
+
+        // Procesar pago
+        async function procesarPago() {
+            Swal.fire({
+                title: 'Procesando pago...',
+                html: 'Por favor espere',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            let total = 0;
+            facturasSeleccionadas.forEach(f => total += parseFloat(f.montoTotal));
+
+            let datos = {
+                idUsuario: usuarioSeleccionado.idUsuario,
+                facturas: facturasSeleccionadas.map(f => f.idFactura),
+                montoTotal: total,
+                metodoPago: cboMetodoPago.value
+            };
+
+            try {
+                let response = await fetch("/api/registrar_pago", {
+                    method: "POST",
+                    body: JSON.stringify(datos)
+                });
+
+                let resultado = await response.json();
+
+                if (resultado.status === 'ok') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Pago registrado!',
+                        html: `
+                            <p>${resultado.mensaje}</p>
+                            <p class="mt-3"><strong>Comprobante generado</strong></p>
+                        `,
+                        confirmButtonColor: '#28a745',
+                        confirmButtonText: 'Ver comprobante'
+                    }).then(() => {
+                        // Abrir comprobante para imprimir
+                        if (resultado.comprobante) {
+                            let ventana = window.open(`/${resultado.comprobante}`, '_blank');
+                            setTimeout(() => {
+                                ventana.print();
+                            }, 500);
+                        }
+                        
+                        // Recargar facturas
+                        cargarFacturasPendientes(usuarioSeleccionado.idUsuario);
+                        facturasSeleccionadas = [];
+                        actualizarTotal();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: resultado.mensaje || 'No se pudo registrar el pago',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            } catch (error) {
+                console.error("Error al procesar pago:", error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo procesar el pago',
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        }
+    </script>
+</body>
+</html>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    

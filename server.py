@@ -7,7 +7,9 @@ import crud_usuario
 import crud_lectura
 import crud_tarifa
 import crud_factura
+import crud_pago
 from generador_recibo import generar_pdf_factura
+from generador_comprobante import generar_pdf_comprobante
 import os
 
 port = 3000
@@ -17,6 +19,7 @@ crudUsuario = crud_usuario.crud_usuario()
 crudLectura = crud_lectura.crud_lectura()
 crudTarifa = crud_tarifa.crud_tarifa()
 crudFactura = crud_factura.crud_factura()
+crudPago = crud_pago.crud_pago()
 
 class miServidor(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -83,6 +86,20 @@ class miServidor(SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(facturas).encode('utf-8'))
             return
 
+        # NUEVO: Obtener facturas pendientes/vencidas para pagos
+        if path == "/api/facturas_pendientes":
+            idUsuario = parametros.get('idUsuario', [0])[0]
+            # Actualizar estados primero
+            crudFactura.actualizar_estados_vencidos()
+            # Obtener solo pendientes y vencidas
+            facturas = crudFactura.consultar_por_usuario(int(idUsuario))
+            facturas_pendientes = [f for f in facturas if f['estado'] in ['Pendiente', 'Vencida']]
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(facturas_pendientes).encode('utf-8'))
+            return
+
         if path == "/api/verificar_factura":
             idLectura = parametros.get('idLectura', [0])[0]
             existe = crudFactura.verificar_factura_existente(idLectura)
@@ -105,7 +122,7 @@ class miServidor(SimpleHTTPRequestHandler):
             }).encode('utf-8'))
             return
 
-        # NUEVO: Generar PDF de factura
+        # Generar PDF de factura
         if path == "/api/generar_pdf_factura":
             idFactura = int(parametros.get('idFactura', [0])[0])
             try:
@@ -136,10 +153,10 @@ class miServidor(SimpleHTTPRequestHandler):
                 }).encode('utf-8'))
             return
 
-        # NUEVO: Descargar PDF generado
+        # Descargar PDF de recibo
         if path.startswith("/recibos/"):
             try:
-                filepath = path[1:]  # Remover el / inicial
+                filepath = path[1:]
                 if os.path.exists(filepath):
                     self.send_response(200)
                     self.send_header('Content-type', 'application/pdf')
@@ -150,6 +167,21 @@ class miServidor(SimpleHTTPRequestHandler):
                     return
             except Exception as e:
                 print(f"Error al servir PDF: {e}")
+
+        # NUEVO: Descargar PDF de comprobante
+        if path.startswith("/comprobantes/"):
+            try:
+                filepath = path[1:]
+                if os.path.exists(filepath):
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/pdf')
+                    self.send_header('Content-Disposition', f'inline; filename="{os.path.basename(filepath)}"')
+                    self.end_headers()
+                    with open(filepath, 'rb') as f:
+                        self.wfile.write(f.read())
+                    return
+            except Exception as e:
+                print(f"Error al servir comprobante: {e}")
         
         # Cargar módulos HTML
         if path == "/vistas":
@@ -184,6 +216,26 @@ class miServidor(SimpleHTTPRequestHandler):
                 resp = resultado
             else:
                 resp = {"msg": resultado}
+
+        # NUEVO: Registrar pago
+        elif self.path == "/api/registrar_pago":
+            resultado = crudPago.registrar_pago(datos)
+            
+            if resultado['status'] == 'ok':
+                # Generar comprobante PDF
+                try:
+                    filename = generar_pdf_comprobante(
+                        resultado['idPago'],
+                        datos,
+                        crudUsuario,
+                        crudFactura
+                    )
+                    resultado['comprobante'] = filename
+                except Exception as e:
+                    print(f"Error al generar comprobante: {e}")
+                    resultado['comprobante'] = None
+            
+            resp = resultado
         
         else:
             resp = {"status": "error", "msg": "Ruta no encontrada"}
