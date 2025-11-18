@@ -203,7 +203,7 @@
                 <div class="total-card">
                     <h5><i class="bi bi-calculator"></i> TOTAL A PAGAR</h5>
                     <div class="total-amount" id="totalPagar">$0.00</div>
-                    <small class="d-block mb-3" id="facturas Seleccionadas">0 factura(s) seleccionada(s)</small>
+                    <small class="d-block mb-3" id="facturasSeleccionadas">0 factura(s) seleccionada(s)</small>
                     
                     <div class="mb-3 text-start">
                         <label class="form-label text-white fw-bold">Método de Pago:</label>
@@ -217,23 +217,8 @@
                         <i class="bi bi-check-circle-fill me-2"></i>Registrar Pago
                     </button>
                 </div>
-
-                <!-- Información adicional -->
-                <div class="card mt-3">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary"></i> Información</h6>
-                        <ul class="small text-muted ps-3">
-                            <li>Seleccione las facturas a pagar con el checkbox</li>
-                            <li>El total se calcula automáticamente</li>
-                            <li>Las facturas vencidas incluyen mora</li>
-                            <li>El comprobante se generará automáticamente</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let usuarios = [];
         let usuarioSeleccionado = null;
@@ -386,8 +371,23 @@
             let checkboxes = document.querySelectorAll('.chk-factura');
             checkboxes.forEach(chk => {
                 chk.checked = this.checked;
-                toggleFactura(chk);
+                // Llamar manualmente la función para cada checkbox
+                let factura = JSON.parse(chk.dataset.factura);
+                let row = chk.closest('tr');
+                
+                if (this.checked) {
+                    // Agregar si no existe
+                    if (!facturasSeleccionadas.find(f => f.idFactura === factura.idFactura)) {
+                        facturasSeleccionadas.push(factura);
+                        row.classList.add('selected');
+                    }
+                } else {
+                    // Remover
+                    facturasSeleccionadas = facturasSeleccionadas.filter(f => f.idFactura !== factura.idFactura);
+                    row.classList.remove('selected');
+                }
             });
+            actualizarTotal();
         });
 
         // Toggle selección de factura
@@ -405,6 +405,8 @@
                 // Remover factura
                 facturasSeleccionadas = facturasSeleccionadas.filter(f => f.idFactura !== factura.idFactura);
                 row.classList.remove('selected');
+                // Desmarcar el checkbox "seleccionar todas"
+                document.getElementById('chkSelectAll').checked = false;
             }
             
             actualizarTotal();
@@ -534,7 +536,5 @@
     </script>
 </body>
 </html>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     
