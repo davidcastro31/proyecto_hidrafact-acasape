@@ -314,7 +314,224 @@ class miServidor(SimpleHTTPRequestHandler):
                         return
                 except Exception as e:
                     print(f"Error al servir comprobante: {e}")
-            
+                    
+                    # Endpoint: reportes
+            if path == "/api/reportes":
+                periodo = parametros.get('periodo', ['mes'])[0]
+
+                try:
+                    from datetime import datetime, timedelta
+
+                    # Obtener todos los datos (se intenta usar los métodos existentes)
+                    try:
+                        usuarios = crudUsuario.consultar("")
+                    except Exception:
+                        usuarios = []
+
+                    try:
+                        facturas = crudFactura.consultar_todas()
+                    except Exception:
+                        try:
+                            facturas = crudFactura.consultar("")
+                        except Exception:
+                            facturas = []
+
+                    try:
+                        pagos = crudPago.consultar_todos_pagos()
+                    except Exception:
+                        try:
+                            pagos = crudPago.consultar_todos()
+                        except Exception:
+                            try:
+                                pagos = crudPago.consultar("")
+                            except Exception:
+                                pagos = []
+
+                    # Filtrar por período
+                    hoy = datetime.now()
+                    if periodo == 'hoy':
+                        fecha_inicio = hoy.replace(hour=0, minute=0, second=0)
+                    elif periodo == 'semana':
+                        fecha_inicio = hoy - timedelta(days=7)
+                    elif periodo == 'mes':
+                        fecha_inicio = hoy - timedelta(days=30)
+                    elif periodo == 'anio':
+                        fecha_inicio = hoy - timedelta(days=365)
+                    else:  # todo
+                        fecha_inicio = datetime(2000, 1, 1)
+
+                    # Estadísticas de usuarios
+                    total_usuarios = len(usuarios)
+                    usuarios_activos = len([u for u in usuarios if u.get('estado') == 'Activo'])
+
+                    # Usuarios morosos y bloqueados
+                    morosos = []
+                    bloqueados_count = 0
+                    deuda_total = 0
+
+                    for usuario in usuarios:
+                        facturas_vencidas_usuario = [f for f in facturas
+                                                      if f.get('idUsuario') == usuario.get('idUsuario')
+                                                      and f.get('estado') == 'Vencida']
+
+                        if len(facturas_vencidas_usuario) > 0:
+                            deuda = sum(float(f.get('montoTotal', 0)) for f in facturas_vencidas_usuario)
+                            deuda_total += deuda
+
+                            morosos.append({
+                                'nombre': usuario.get('nombre'),
+                                'num_contador': usuario.get('num_contador'),
+                                'facturas_vencidas': len(facturas_vencidas_usuario),
+                                'deuda': deuda
+                            })
+
+                            if len(facturas_vencidas_usuario) >= 3:
+                                bloqueados_count += 1
+
+                    # Ordenar morosos por deuda
+                    morosos = sorted(morosos, key=lambda x: x['deuda'], reverse=True)[:10]
+
+                    # Estadísticas de facturas
+                    facturas_periodo = []
+                    for f in facturas:
+                        fecha_str = f.get('fechaEmision')
+                        try:
+                            if fecha_str and datetime.strptime(fecha_str, '%Y-%m-%d') >= fecha_inicio:
+                                facturas_periodo.append(f)
+                        except Exception:
+                            continue
+
+                    total_facturas = len(facturas_periodo)
+                    facturas_pagadas = len([f for f in facturas_periodo if f.get('estado') == 'Pagada'])
+                    facturas_pendientes = len([f for f in facturas_periodo if f.get('estado') == 'Pendiente'])
+                    facturas_vencidas = len([f for f in facturas_periodo if f.get('estado') == 'Vencida'])
+
+                    monto_pendiente = sum(float(f.get('montoTotal', 0)) for f in facturas_periodo if f.get('estado') == 'Pendiente')
+                    monto_vencido = sum(float(f.get('montoTotal', 0)) for f in facturas_periodo if f.get('estado') == 'Vencida')
+
+                    # Ingresos
+                    pagos_periodo = []
+                    for p in pagos:
+                        fecha_p = p.get('fechaPago')
+                        try:
+                            if fecha_p and datetime.strptime(fecha_p, '%Y-%m-%d') >= fecha_inicio:
+                                pagos_periodo.append(p)
+                        except Exception:
+                            continue
+
+                    total_ingresos = sum(float(p.get('montoPagado', 0)) for p in pagos_periodo)
+
+                    # Ingresos mensuales (últimos 6 meses)
+                    meses_labels = []
+                    meses_montos = []
+
+                    for i in range(5, -1, -1):
+                        mes_fecha = hoy - timedelta(days=i*30)
+                        mes_inicio = mes_fecha.replace(day=1)
+                        if i > 0:
+                            mes_fin = (mes_fecha + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+                        else:
+                            mes_fin = hoy
+
+                        pagos_mes = []
+                        for p in pagos:
+                            fecha_p = p.get('fechaPago')
+                            try:
+                                if fecha_p and mes_inicio <= datetime.strptime(fecha_p, '%Y-%m-%d') <= mes_fin:
+                                    pagos_mes.append(p)
+                            except Exception:
+                                continue
+
+                        meses_labels.append(mes_fecha.strftime('%b'))
+                        meses_montos.append(sum(float(p.get('montoPagado', 0)) for p in pagos_mes))
+
+                    # Métodos de pago
+                    metodos = {}
+                    for pago in pagos_periodo:
+                        metodo = pago.get('metodoPago', 'Efectivo')
+                        if metodo not in metodos:
+                            metodos[metodo] = {'cantidad': 0, 'monto': 0}
+                        metodos[metodo]['cantidad'] += 1
+                        metodos[metodo]['monto'] += float(pago.get('montoPagado', 0))
+
+                    # Consumo de agua (de lecturas)
+                    try:
+                        from crud_lectura import crud_lectura
+                        crudLect = crud_lectura()
+                        todas_lecturas = []
+                        for usuario in usuarios:
+                            try:
+                                lecturas = crudLect.consultar_por_usuario(usuario.get('idUsuario'))
+                                todas_lecturas.extend(lecturas)
+                            except Exception:
+                                continue
+
+                        consumos = [float(l.get('consumoM3', 0)) for l in todas_lecturas if l.get('consumoM3')]
+                        consumo_total = sum(consumos) if consumos else 0
+                        consumo_promedio = consumo_total / len(consumos) if consumos else 0
+                        consumo_maximo = max(consumos) if consumos else 0
+                        consumo_minimo = min(consumos) if consumos else 0
+                    except Exception:
+                        consumo_total = 0
+                        consumo_promedio = 0
+                        consumo_maximo = 0
+                        consumo_minimo = 0
+
+                    # Construir respuesta
+                    reporte = {
+                        'usuarios': {
+                            'total': total_usuarios,
+                            'activos': usuarios_activos
+                        },
+                        'ingresos': {
+                            'total': total_ingresos
+                        },
+                        'morosos': {
+                            'total': len(morosos),
+                            'deuda': deuda_total
+                        },
+                        'bloqueados': bloqueados_count,
+                        'facturas': {
+                            'total': total_facturas,
+                            'pagadas': facturas_pagadas,
+                            'pendientes': facturas_pendientes,
+                            'vencidas': facturas_vencidas,
+                            'montoPendiente': monto_pendiente,
+                            'montoVencido': monto_vencido
+                        },
+                        'ingresosMensuales': {
+                            'meses': meses_labels,
+                            'montos': meses_montos
+                        },
+                        'topMorosos': morosos,
+                        'metodosPago': {
+                            'metodos': list(metodos.keys()),
+                            'cantidades': [metodos[m]['cantidad'] for m in metodos],
+                            'montos': [metodos[m]['monto'] for m in metodos]
+                        },
+                        'consumo': {
+                            'total': consumo_total,
+                            'promedio': consumo_promedio,
+                            'maximo': consumo_maximo,
+                            'minimo': consumo_minimo
+                        }
+                    }
+
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(reporte).encode('utf-8'))
+                    return
+
+                except Exception as e:
+                    print(f"Error en reportes: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    self.send_response(500)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                    return
             # Cargar módulos HTML
             if path == "/vistas":
                 self.path = '/modulos/' + parametros['form'][0] + '.html'

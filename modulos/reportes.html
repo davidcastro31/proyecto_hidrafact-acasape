@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes - Hidrofact ACASAPE</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background-color: #0d6efd !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        .section-title {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .table thead th {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        
+        .progress-bar-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center w-100">
+                <button class="btn btn-outline-light rounded-circle me-3" onclick="window.location.href='/index.html'">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                
+                <h4 class="text-white mb-0 flex-grow-1 text-center fw-bold">
+                    <i class="bi bi-graph-up-arrow me-2"></i>REPORTES Y ESTADÍSTICAS
+                </h4>
+                
+                <div class="d-flex gap-2 align-items-center">
+                    <select class="form-select form-select-sm" id="filtroPeriodo" style="width: 180px;">
+                        <option value="hoy">📅 Hoy</option>
+                        <option value="semana">📊 Esta Semana</option>
+                        <option value="mes" selected>📈 Este Mes</option>
+                        <option value="anio">📆 Este Año</option>
+                        <option value="todo">🌐 Todo el Tiempo</option>
+                    </select>
+                    <button class="btn btn-success btn-sm" id="btnExportar">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+                    </button>
+                    <button class="btn btn-light btn-sm" id="btnImprimir">
+                        <i class="bi bi-printer me-1"></i>Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4 px-4">
+        <!-- Tarjetas de Resumen -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-primary">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="stat-value text-primary" id="totalUsuarios">0</div>
+                    <div class="stat-label">Total Usuarios</div>
+                    <small class="text-muted" id="usuariosActivos">0 activos</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-success">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                    <div class="stat-value text-success" id="totalIngresos">$0.00</div>
+                    <div class="stat-label">Ingresos</div>
+                    <small class="text-muted" id="ingresosPeriodo">del período</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div class="stat-value text-warning" id="totalMorosos">0</div>
+                    <div class="stat-label">Usuarios Morosos</div>
+                    <small class="text-muted" id="deudaTotal">Deuda: $0.00</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-danger">
+                        <i class="bi bi-ban"></i>
+                    </div>
+                    <div class="stat-value text-danger" id="totalBloqueados">0</div>
+                    <div class="stat-label">Usuarios Bloqueados</div>
+                    <small class="text-muted">3+ facturas vencidas</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Segunda fila de estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-info">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <div class="stat-value text-info" id="totalFacturas">0</div>
+                    <div class="stat-label">Facturas Generadas</div>
+                    <small class="text-muted" id="facturasPeriodo">del período</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div class="stat-value text-success" id="facturasPagadas">0</div>
+                    <div class="stat-label">Facturas Pagadas</div>
+                    <small class="text-muted" id="tasaRecuperacion">0% tasa</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-warning">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div class="stat-value text-warning" id="facturasPendientes">0</div>
+                    <div class="stat-label">Facturas Pendientes</div>
+                    <small class="text-muted" id="montoPendiente">$0.00</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-danger">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </div>
+                    <div class="stat-value text-danger" id="facturasVencidas">0</div>
+                    <div class="stat-label">Facturas Vencidas</div>
+                    <small class="text-muted" id="montoVencido">$0.00</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-4">
+                            <i class="bi bi-pie-chart-fill text-primary me-2"></i>Estado de Facturas
+                        </h5>
+                        <canvas id="chartFacturas" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-4">
+                            <i class="bi bi-bar-chart-fill text-success me-2"></i>Ingresos Mensuales
+                        </h5>
+                        <canvas id="chartIngresos" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Morosos -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-4">
+                    <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Top 10 Usuarios Morosos
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Usuario</th>
+                                <th>N° Contador</th>
+                                <th>Facturas Vencidas</th>
+                                <th>Deuda Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblTopMorosos">
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Cargando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consumo de Agua -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-4">
+                    <i class="bi bi-droplet-fill text-info me-2"></i>Estadísticas de Consumo de Agua
+                </h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h3 class="text-primary mb-0" id="consumoTotal">0 m³</h3>
+                            <small class="text-muted">Consumo Total</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h3 class="text-success mb-0" id="consumoPromedio">0 m³</h3>
+                            <small class="text-muted">Promedio por Usuario</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h3 class="text-warning mb-0" id="consumoMaximo">0 m³</h3>
+                            <small class="text-muted">Consumo Máximo</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h3 class="text-info mb-0" id="consumoMinimo">0 m³</h3>
+                            <small class="text-muted">Consumo Mínimo</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métodos de Pago -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-4">
+                    <i class="bi bi-credit-card-fill text-primary me-2"></i>Métodos de Pago Utilizados
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <canvas id="chartMetodosPago" style="max-height: 250px;"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Método</th>
+                                        <th class="text-end">Cantidad</th>
+                                        <th class="text-end">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tblMetodosPago">
+                                    <tr>
+                                        <td colspan="3" class="text-center">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        let datosReporte = {};
+        let chartFacturas = null;
+        let chartIngresos = null;
+        let chartMetodosPago = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await cargarReportes();
+            
+            // Listener para cambio de período
+            filtroPeriodo.addEventListener('change', async () => {
+                await cargarReportes();
+            });
+        });
+
+        async function cargarReportes() {
+            try {
+                Swal.fire({
+                    title: 'Cargando reportes...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                let periodo = filtroPeriodo.value;
+                let response = await fetch(`/api/reportes?periodo=${periodo}`);
+                datosReporte = await response.json();
+
+                Swal.close();
+                
+                mostrarEstadisticas();
+                crearGraficos();
+                mostrarTopMorosos();
+                mostrarMetodosPago();
+                
+            } catch (error) {
+                console.error("Error al cargar reportes:", error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudieron cargar los reportes'
+                });
+            }
+        }
+
+        function mostrarEstadisticas() {
+            // Usuarios
+            document.getElementById('totalUsuarios').textContent = datosReporte.usuarios?.total || 0;
+            document.getElementById('usuariosActivos').textContent = `${datosReporte.usuarios?.activos || 0} activos`;
+            
+            // Ingresos
+            document.getElementById('totalIngresos').textContent = `$${(datosReporte.ingresos?.total || 0).toFixed(2)}`;
+            document.getElementById('ingresosPeriodo').textContent = `del período`;
+            
+            // Morosos
+            document.getElementById('totalMorosos').textContent = datosReporte.morosos?.total || 0;
+            document.getElementById('deudaTotal').textContent = `Deuda: $${(datosReporte.morosos?.deuda || 0).toFixed(2)}`;
+            
+            // Bloqueados
+            document.getElementById('totalBloqueados').textContent = datosReporte.bloqueados || 0;
+            
+            // Facturas
+            document.getElementById('totalFacturas').textContent = datosReporte.facturas?.total || 0;
+            document.getElementById('facturasPeriodo').textContent = `del período`;
+            
+            document.getElementById('facturasPagadas').textContent = datosReporte.facturas?.pagadas || 0;
+            let tasa = datosReporte.facturas?.total > 0 
+                ? ((datosReporte.facturas?.pagadas / datosReporte.facturas?.total) * 100).toFixed(1)
+                : 0;
+            document.getElementById('tasaRecuperacion').textContent = `${tasa}% tasa`;
+            
+            document.getElementById('facturasPendientes').textContent = datosReporte.facturas?.pendientes || 0;
+            document.getElementById('montoPendiente').textContent = `$${(datosReporte.facturas?.montoPendiente || 0).toFixed(2)}`;
+            
+            document.getElementById('facturasVencidas').textContent = datosReporte.facturas?.vencidas || 0;
+            document.getElementById('montoVencido').textContent = `$${(datosReporte.facturas?.montoVencido || 0).toFixed(2)}`;
+            
+            // Consumo
+            document.getElementById('consumoTotal').textContent = `${(datosReporte.consumo?.total || 0).toFixed(2)} m³`;
+            document.getElementById('consumoPromedio').textContent = `${(datosReporte.consumo?.promedio || 0).toFixed(2)} m³`;
+            document.getElementById('consumoMaximo').textContent = `${(datosReporte.consumo?.maximo || 0).toFixed(2)} m³`;
+            document.getElementById('consumoMinimo').textContent = `${(datosReporte.consumo?.minimo || 0).toFixed(2)} m³`;
+        }
+
+        function crearGraficos() {
+            // Gráfico de Estado de Facturas
+            if (chartFacturas) chartFacturas.destroy();
+            
+            const ctxFacturas = document.getElementById('chartFacturas').getContext('2d');
+            chartFacturas = new Chart(ctxFacturas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pagadas', 'Pendientes', 'Vencidas'],
+                    datasets: [{
+                        data: [
+                            datosReporte.facturas?.pagadas || 0,
+                            datosReporte.facturas?.pendientes || 0,
+                            datosReporte.facturas?.vencidas || 0
+                        ],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Ingresos Mensuales
+            if (chartIngresos) chartIngresos.destroy();
+            
+            const ctxIngresos = document.getElementById('chartIngresos').getContext('2d');
+            chartIngresos = new Chart(ctxIngresos, {
+                type: 'bar',
+                data: {
+                    labels: datosReporte.ingresosMensuales?.meses || [],
+                    datasets: [{
+                        label: 'Ingresos ($)',
+                        data: datosReporte.ingresosMensuales?.montos || [],
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Métodos de Pago
+            if (chartMetodosPago) chartMetodosPago.destroy();
+            
+            const ctxMetodos = document.getElementById('chartMetodosPago').getContext('2d');
+            chartMetodosPago = new Chart(ctxMetodos, {
+                type: 'pie',
+                data: {
+                    labels: datosReporte.metodosPago?.metodos || [],
+                    datasets: [{
+                        data: datosReporte.metodosPago?.cantidades || [],
+                        backgroundColor: ['#28a745', '#0d6efd', '#ffc107', '#dc3545'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function mostrarTopMorosos() {
+            let filas = "";
+            let morosos = datosReporte.topMorosos || [];
+
+            if (morosos.length === 0) {
+                filas = `<tr><td colspan="6" class="text-center py-4"><i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i><p class="text-success mt-2">¡No hay usuarios morosos!</p></td></tr>`;
+            } else {
+                morosos.forEach((moroso, index) => {
+                    let badgeEstado = moroso.facturas_vencidas >= 3
+                        ? '<span class="badge bg-danger">BLOQUEADO</span>'
+                        : '<span class="badge bg-warning text-dark">MOROSO</span>';
+                    
+                    filas += `
+                        <tr>
+                            <td class="fw-semibold">${index + 1}</td>
+                            <td>${moroso.nombre}</td>
+                            <td><span class="badge bg-light text-dark">${moroso.num_contador}</span></td>
+                            <td><span class="badge bg-danger">${moroso.facturas_vencidas}</span></td>
+                            <td class="fw-bold text-danger">$${moroso.deuda.toFixed(2)}</td>
+                            <td>${badgeEstado}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            tblTopMorosos.innerHTML = filas;
+        }
+
+        function mostrarMetodosPago() {
+            let filas = "";
+            let metodos = datosReporte.metodosPago || {};
+
+            if (!metodos.metodos || metodos.metodos.length === 0) {
+                filas = `<tr><td colspan="3" class="text-center">Sin datos</td></tr>`;
+            } else {
+                metodos.metodos.forEach((metodo, index) => {
+                    filas += `
+                        <tr>
+                            <td><i class="bi bi-${metodo === 'Efectivo' ? 'cash' : 'credit-card'} me-2"></i>${metodo}</td>
+                            <td class="text-end">${metodos.cantidades[index]}</td>
+                            <td class="text-end fw-bold text-success">$${metodos.montos[index].toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            tblMetodosPago.innerHTML = filas;
+        }
+
+        // Exportar a Excel (CSV)
+        btnExportar.addEventListener('click', () => {
+            let csv = 'REPORTE DE ESTADÍSTICAS - HIDROFACT ACASAPE\n\n';
+            csv += 'RESUMEN GENERAL\n';
+            csv += 'Total Usuarios,' + (datosReporte.usuarios?.total || 0) + '\n';
+            csv += 'Usuarios Activos,' + (datosReporte.usuarios?.activos || 0) + '\n';
+            csv += 'Ingresos Total,$' + (datosReporte.ingresos?.total || 0).toFixed(2) + '\n';
+            csv += 'Usuarios Morosos,' + (datosReporte.morosos?.total || 0) + '\n';
+            csv += 'Deuda Total,$' + (datosReporte.morosos?.deuda || 0).toFixed(2) + '\n\n';
+            
+            csv += 'FACTURAS\n';
+            csv += 'Total Generadas,' + (datosReporte.facturas?.total || 0) + '\n';
+            csv += 'Pagadas,' + (datosReporte.facturas?.pagadas || 0) + '\n';
+            csv += 'Pendientes,' + (datosReporte.facturas?.pendientes || 0) + '\n';
+            csv += 'Vencidas,' + (datosReporte.facturas?.vencidas || 0) + '\n\n';
+            
+            csv += 'TOP MOROSOS\n';
+            csv += 'Posición,Usuario,Contador,Facturas Vencidas,Deuda\n';
+            (datosReporte.topMorosos || []).forEach((m, i) => {
+                csv += `${i+1},${m.nombre},${m.num_contador},${m.facturas_vencidas},$${m.deuda.toFixed(2)}\n`;
+            });
+
+            let blob = new Blob([csv], { type: 'text/csv' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = `reporte_${filtroPeriodo.value}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Imprimir
+        btnImprimir.addEventListener('click', () => {
+            window.print();
+        });
+    </script>
+</body>
+</html>
