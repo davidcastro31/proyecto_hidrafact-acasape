@@ -111,8 +111,11 @@ class crud_factura:
         
         return tarifas
     
-    def calcular_factura_consumo(self, consumoM3, tiene_mora=False):
-        """Calcula el monto de una factura basada en consumo de agua"""
+    def calcular_factura_consumo(self, consumoM3, cantidad_facturas_vencidas=0):
+        """
+        Calcula el monto de una factura basada en consumo de agua
+        MORA ACUMULATIVA: Se aplica una mora por cada factura vencida
+        """
         tarifas = self.obtener_tarifas()
         
         subtotal = 0
@@ -127,28 +130,19 @@ class crud_factura:
             m3_adicionales = consumoM3 - 5
             subtotal += m3_adicionales * tarifas.get('M³ ADICIONAL', 0.50)
         
-        # Mora si aplica (se aplica a la SIGUIENTE factura, no a la vencida)
-        if tiene_mora:
-            mora = tarifas.get('MORA (RECIBO VENCIDO)', 2.00)
+        # MORA ACUMULATIVA: una mora por cada factura vencida
+        if cantidad_facturas_vencidas > 0:
+            mora_unitaria = tarifas.get('MORA (RECIBO VENCIDO)', 2.00)
+            mora = mora_unitaria * cantidad_facturas_vencidas
         
         total = subtotal + mora
         
         return {
             'subtotal': round(subtotal, 2),
             'mora': round(mora, 2),
-            'total': round(total, 2)
+            'total': round(total, 2),
+            'cantidad_moras': cantidad_facturas_vencidas
         }
-    
-    def verificar_mora(self, idUsuario):
-        """Verifica si el usuario tiene facturas vencidas pendientes (para aplicar mora a la SIGUIENTE factura)"""
-        sql = f"""
-            SELECT * FROM facturas 
-            WHERE idUsuario = {idUsuario} 
-            AND estado IN ('Pendiente', 'Vencida')
-            AND fechaVencimiento < CURDATE()
-        """
-        resultado = db.consultar(sql)
-        return len(resultado) > 0
     
     def administrar(self, datos):
         """Maneja crear, modificar y eliminar facturas"""
@@ -162,12 +156,11 @@ class crud_factura:
             if self.verificar_factura_existente(datos['idLectura']):
                 return "Ya existe una factura para esta lectura"
             
-            # Verificar si tiene mora (facturas anteriores vencidas)
-            # La mora se aplica a la NUEVA factura, no a la vencida
-            tiene_mora = self.verificar_mora(datos['idUsuario'])
+            # Contar facturas vencidas para aplicar mora acumulativa
+            cantidad_vencidas = self.contar_facturas_vencidas(datos['idUsuario'])
             
-            # Calcular montos
-            calculo = self.calcular_factura_consumo(datos['consumoM3'], tiene_mora)
+            # Calcular montos con mora acumulativa
+            calculo = self.calcular_factura_consumo(datos['consumoM3'], cantidad_vencidas)
             
             # Fecha de emisión y vencimiento
             fecha_emision = date.today()
@@ -194,7 +187,12 @@ class crud_factura:
             resultado = db.ejecutar(sql, valores)
             
             if resultado == "ok":
-                return {"msg": "ok", "montoTotal": calculo['total']}
+                return {
+                    "msg": "ok", 
+                    "montoTotal": calculo['total'],
+                    "mora": calculo['mora'],
+                    "cantidad_moras": calculo['cantidad_moras']
+                }
             else:
                 return resultado
         
@@ -205,15 +203,19 @@ class crud_factura:
                 return f"USUARIO BLOQUEADO: Tiene {total_vencidas} facturas vencidas. Debe pagar al menos una factura vencida antes de generar nuevas facturas."
             
             # Para otros servicios (Reconexión, Acometida, etc.)
-            # Verificar si tiene mora
-            tiene_mora = self.verificar_mora(datos['idUsuario'])
+            # Verificar cantidad de facturas vencidas para mora acumulativa
+            cantidad_vencidas = self.contar_facturas_vencidas(datos['idUsuario'])
             
             fecha_emision = date.today()
             fecha_vencimiento = fecha_emision + timedelta(days=30)
             
-            # Calcular mora si aplica
+            # Calcular mora acumulativa si aplica
             tarifas = self.obtener_tarifas()
-            mora = tarifas.get('MORA (RECIBO VENCIDO)', 2.00) if tiene_mora else 0
+            mora = 0
+            if cantidad_vencidas > 0:
+                mora_unitaria = tarifas.get('MORA (RECIBO VENCIDO)', 2.00)
+                mora = mora_unitaria * cantidad_vencidas
+            
             monto_base = datos['monto']
             monto_total = monto_base + mora
             
@@ -234,7 +236,17 @@ class crud_factura:
                 'Pendiente'
             )
             
-            return db.ejecutar(sql, valores)
+            resultado = db.ejecutar(sql, valores)
+            
+            if resultado == "ok":
+                return {
+                    "msg": "ok",
+                    "montoTotal": monto_total,
+                    "mora": mora,
+                    "cantidad_moras": cantidad_vencidas
+                }
+            else:
+                return resultado
         
         elif datos['accion'] == "eliminar":
             # Solo se pueden eliminar facturas no pagadas

@@ -1,4 +1,3 @@
-# server.py (actualizado con /api/detalle_usuario)
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib import parse
 from urllib.parse import urlparse, parse_qs
@@ -184,7 +183,6 @@ class miServidor(SimpleHTTPRequestHandler):
                 # pagos (CORREGIDO: llamar al método correcto del CRUD)
                 pagos = []
                 try:
-                    # preferimos el método que ya tienes: consultar_pagos_usuario
                     if hasattr(crudPago, 'consultar_pagos_usuario'):
                         pagos = crudPago.consultar_pagos_usuario(idU)
                     elif hasattr(crudPago, 'consultar_por_usuario'):

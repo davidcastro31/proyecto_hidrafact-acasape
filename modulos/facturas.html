@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Facturación | Hydrofact</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -79,7 +80,6 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <nav class="navbar navbar-dark">
         <div class="container-fluid">
             <div class="d-flex align-items-center w-100">
@@ -96,7 +96,6 @@
         </div>
     </nav>
 
-    <!-- Vista 1: Lista de Usuarios -->
     <div class="container-fluid mt-4 px-4" id="vistaUsuarios">
         <div class="card">
             <div class="card-header bg-white">
@@ -126,7 +125,6 @@
         </div>
     </div>
 
-    <!-- Vista 2: Facturas del Usuario -->
     <div class="container-fluid mt-4 px-4" id="vistaFacturas" style="display: none;">
         <button class="btn btn-secondary mb-3" onclick="volverAUsuarios()">
             <i class="bi bi-arrow-left"></i> Volver a Usuarios
@@ -156,9 +154,29 @@
         <div class="card">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Facturas Emitidas</h5>
-                <button class="btn btn-success btn-sm" id="btnFacturaEspecial">
-                    <i class="bi bi-plus-circle-fill me-1"></i> Factura Especial
-                </button>
+                
+                <div class="d-flex gap-2 align-items-center">
+                    <select id="cboMesFacturas" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">Todo el Mes</option>
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                    <select id="cboAnioFacturas" class="form-select form-select-sm" style="width: 100px;">
+                        </select>
+                    <button class="btn btn-success btn-sm" id="btnFacturaEspecial">
+                        <i class="bi bi-plus-circle-fill me-1"></i> Factura Especial
+                    </button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -187,7 +205,6 @@
         </div>
     </div>
 
-    <!-- Modal Factura Especial -->
     <div class="modal fade" id="modalFacturaEspecial" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -239,13 +256,33 @@
         let usuarios = [];
         let usuarioSeleccionado = null;
         let tarifas = {};
+        let facturasOriginales = []; // Guarda todas las facturas del usuario
         let modalFacturaEspecial = null;
+
+        const cboMesFacturas = document.getElementById('cboMesFacturas');
+        const cboAnioFacturas = document.getElementById('cboAnioFacturas');
 
         document.addEventListener('DOMContentLoaded', async () => {
             modalFacturaEspecial = new bootstrap.Modal(document.getElementById('modalFacturaEspecial'));
+            inicializarFiltrosAnio();
             await cargarUsuarios();
             await cargarTarifas();
+            
+            // Eventos para el filtro de facturas
+            cboMesFacturas.addEventListener('change', () => aplicarFiltroFacturas());
+            cboAnioFacturas.addEventListener('change', () => aplicarFiltroFacturas());
         });
+
+        // --- FUNCIONES DE FILTRO DE AÑO ---
+        function inicializarFiltrosAnio() {
+            const anioActual = new Date().getFullYear();
+            let opciones = `<option value="">Todo el tiempo</option>`;
+            for (let i = anioActual; i >= 2020; i--) {
+                opciones += `<option value="${i}">${i}</option>`;
+            }
+            cboAnioFacturas.innerHTML = opciones;
+            cboAnioFacturas.value = anioActual; // Selecciona el año actual por defecto
+        }
 
         // Cargar usuarios
         async function cargarUsuarios() {
@@ -325,6 +362,9 @@
             document.getElementById('vistaUsuarios').style.display = 'none';
             document.getElementById('vistaFacturas').style.display = 'block';
             
+            // Limpiar filtros y cargar facturas
+            cboMesFacturas.value = "";
+            cboAnioFacturas.value = new Date().getFullYear();
             await cargarFacturas(usuario.idUsuario);
         }
 
@@ -340,11 +380,40 @@
             try {
                 let response = await fetch(`/api/facturas?idUsuario=${idUsuario}`);
                 let facturas = await response.json();
-                mostrarFacturas(facturas);
+                facturasOriginales = facturas; // Guardar la lista completa
+                aplicarFiltroFacturas(); // Mostrar las facturas filtradas
             } catch (error) {
                 console.error("Error al cargar facturas:", error);
+                facturasOriginales = [];
                 mostrarFacturas([]);
             }
+        }
+
+        // Aplicar filtros de Mes y Año
+        function aplicarFiltroFacturas() {
+            const mesSeleccionado = cboMesFacturas.value;
+            const anioSeleccionado = cboAnioFacturas.value;
+
+            let facturasFiltradas = facturasOriginales.filter(factura => {
+                const fecha = new Date(factura.fechaEmision + 'T00:00:00');
+                const mesFactura = fecha.getMonth() + 1; // getMonth() es 0-11
+                const anioFactura = fecha.getFullYear();
+                
+                let pasaFiltroMes = true;
+                let pasaFiltroAnio = true;
+
+                if (mesSeleccionado !== "") {
+                    pasaFiltroMes = (mesFactura === parseInt(mesSeleccionado));
+                }
+
+                if (anioSeleccionado !== "") {
+                    pasaFiltroAnio = (anioFactura === parseInt(anioSeleccionado));
+                }
+
+                return pasaFiltroMes && pasaFiltroAnio;
+            });
+            
+            mostrarFacturas(facturasFiltradas);
         }
 
         // Verificar y actualizar estado de facturas vencidas
@@ -371,7 +440,7 @@
                     <tr>
                         <td colspan="7" class="text-center py-4">
                             <i class="bi bi-inbox" style="font-size: 2rem; color: #ccc;"></i>
-                            <p class="text-muted mt-2">No hay facturas registradas</p>
+                            <p class="text-muted mt-2">No hay facturas registradas para el filtro seleccionado</p>
                         </td>
                     </tr>
                 `;
@@ -467,6 +536,7 @@
             try {
                 let response = await fetch("/api/facturas", {
                     method: "POST",
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(datos)
                 });
 
@@ -488,6 +558,7 @@
                         title: 'Factura especial generada exitosamente'
                     });
 
+                    // Recargar facturas con los filtros aplicados
                     await cargarFacturas(usuarioSeleccionado.idUsuario);
                 } else {
                     Swal.fire({
@@ -533,6 +604,7 @@
                     try {
                         let response = await fetch("/api/facturas", {
                             method: "POST",
+                            headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify(datos)
                         });
 
@@ -552,6 +624,7 @@
                                 title: 'Factura eliminada exitosamente'
                             });
 
+                            // Recargar facturas con los filtros aplicados
                             await cargarFacturas(usuarioSeleccionado.idUsuario);
                         } else {
                             Swal.fire({

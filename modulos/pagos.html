@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Pagos | Hydrofact</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -87,7 +88,6 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <nav class="navbar navbar-dark">
         <div class="container-fluid">
             <div class="d-flex align-items-center w-100">
@@ -104,7 +104,6 @@
         </div>
     </nav>
 
-    <!-- Vista 1: Lista de Usuarios -->
     <div class="container-fluid mt-4 px-4" id="vistaUsuarios">
         <div class="card">
             <div class="card-header bg-white">
@@ -134,13 +133,11 @@
         </div>
     </div>
 
-    <!-- Vista 2: Facturas del Usuario para Pago -->
     <div class="container-fluid mt-4 px-4" id="vistaPagos" style="display: none;">
         <button class="btn btn-secondary mb-3" onclick="volverAUsuarios()">
             <i class="bi bi-arrow-left"></i> Volver a Usuarios
         </button>
 
-        <!-- Info del usuario -->
         <div class="info-card">
             <div class="row">
                 <div class="col-md-3">
@@ -163,11 +160,29 @@
         </div>
 
         <div class="row">
-            <!-- Tabla de facturas -->
             <div class="col-md-8">
                 <div class="card">
-                    <div class="card-header bg-white">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Facturas Pendientes</h5>
+                         <div class="d-flex gap-2 align-items-center">
+                            <select id="cboMesPagos" class="form-select form-select-sm" style="width: 150px;">
+                                <option value="">Todo el Mes</option>
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                            <select id="cboAnioPagos" class="form-select form-select-sm" style="width: 100px;">
+                                </select>
+                        </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -198,7 +213,6 @@
                 </div>
             </div>
 
-            <!-- Panel de pago -->
             <div class="col-md-4">
                 <div class="total-card">
                     <h5><i class="bi bi-calculator"></i> TOTAL A PAGAR</h5>
@@ -217,17 +231,40 @@
                         <i class="bi bi-check-circle-fill me-2"></i>Registrar Pago
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let usuarios = [];
         let usuarioSeleccionado = null;
         let facturasSeleccionadas = [];
-        let todasLasFacturas = [];
+        let todasLasFacturas = []; // Almacena todas las facturas pendientes
+        
+        const cboMesPagos = document.getElementById('cboMesPagos');
+        const cboAnioPagos = document.getElementById('cboAnioPagos');
 
         document.addEventListener('DOMContentLoaded', async () => {
+            inicializarFiltrosAnio();
             await cargarUsuarios();
+            
+            // Eventos para el filtro de facturas
+            cboMesPagos.addEventListener('change', () => aplicarFiltroFacturas());
+            cboAnioPagos.addEventListener('change', () => aplicarFiltroFacturas());
         });
+
+        // --- FUNCIONES DE FILTRO DE AÑO ---
+        function inicializarFiltrosAnio() {
+            const anioActual = new Date().getFullYear();
+            let opciones = `<option value="">Todo el tiempo</option>`;
+            for (let i = anioActual; i >= 2020; i--) {
+                opciones += `<option value="${i}">${i}</option>`;
+            }
+            cboAnioPagos.innerHTML = opciones;
+            cboAnioPagos.value = anioActual; // Selecciona el año actual por defecto
+        }
 
         // Cargar usuarios
         async function cargarUsuarios() {
@@ -294,6 +331,9 @@
             document.getElementById('vistaUsuarios').style.display = 'none';
             document.getElementById('vistaPagos').style.display = 'block';
             
+            // Limpiar filtros y cargar facturas
+            cboMesPagos.value = "";
+            cboAnioPagos.value = new Date().getFullYear();
             await cargarFacturasPendientes(usuario.idUsuario);
         }
 
@@ -310,44 +350,86 @@
         async function cargarFacturasPendientes(idUsuario) {
             try {
                 let response = await fetch(`/api/facturas_pendientes?idUsuario=${idUsuario}`);
+                // Aquí guardamos TODAS las facturas pendientes
                 todasLasFacturas = await response.json();
-                mostrarFacturasPendientes(todasLasFacturas);
+                // Aplicamos el filtro al cargar por primera vez
+                aplicarFiltroFacturas();
             } catch (error) {
                 console.error("Error al cargar facturas:", error);
+                todasLasFacturas = [];
                 mostrarFacturasPendientes([]);
             }
         }
+        
+        // Aplicar filtros de Mes y Año
+        function aplicarFiltroFacturas() {
+            const mesSeleccionado = cboMesPagos.value;
+            const anioSeleccionado = cboAnioPagos.value;
+            
+            // Aseguramos que la selección de facturas se mantenga si la factura sigue en la lista filtrada
+            // Y se remueva si ya no está
+            
+            let facturasFiltradas = todasLasFacturas.filter(factura => {
+                const fecha = new Date(factura.fechaEmision + 'T00:00:00');
+                const mesFactura = fecha.getMonth() + 1; // getMonth() es 0-11
+                const anioFactura = fecha.getFullYear();
+                
+                let pasaFiltroMes = true;
+                let pasaFiltroAnio = true;
 
-        // Mostrar facturas pendientes
+                if (mesSeleccionado !== "") {
+                    pasaFiltroMes = (mesFactura === parseInt(mesSeleccionado));
+                }
+
+                if (anioSeleccionado !== "") {
+                    pasaFiltroAnio = (anioFactura === parseInt(anioSeleccionado));
+                }
+
+                return pasaFiltroMes && pasaFiltroAnio;
+            });
+            
+            mostrarFacturasPendientes(facturasFiltradas);
+        }
+
+        // Mostrar facturas pendientes (filtradas)
         function mostrarFacturasPendientes(facturas) {
             let filas = "";
+            
+            // Deseleccionar facturas que ya no están en el filtro
+            facturasSeleccionadas = facturasSeleccionadas.filter(f => 
+                facturas.some(filteredF => filteredF.idFactura === f.idFactura)
+            );
 
             if (facturas.length === 0) {
                 filas = `
                     <tr>
                         <td colspan="7" class="text-center py-4">
                             <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
-                            <p class="text-success mt-2 fw-bold">¡No hay facturas pendientes!</p>
-                            <small class="text-muted">Este usuario está al día con sus pagos</small>
+                            <p class="text-success mt-2 fw-bold">¡No hay facturas pendientes para este filtro!</p>
+                            <small class="text-muted">Pruebe con otra fecha</small>
                         </td>
                     </tr>
                 `;
-                btnRegistrarPago.disabled = true;
             } else {
                 facturas.forEach((factura, index) => {
                     let fechaEmision = new Date(factura.fechaEmision + 'T00:00:00').toLocaleDateString('es-SV');
                     let fechaVencimiento = new Date(factura.fechaVencimiento + 'T00:00:00').toLocaleDateString('es-SV');
                     
-                    let badgeEstado = factura.estado === 'Vencida'
+                    let estadoFactura = verificarEstadoFactura(factura);
+                    let badgeEstado = estadoFactura === 'Vencida'
                         ? '<span class="badge bg-danger">Vencida</span>'
                         : '<span class="badge bg-warning text-dark">Pendiente</span>';
                     
+                    // Verificar si está seleccionada
+                    const isSelected = facturasSeleccionadas.some(f => f.idFactura === factura.idFactura);
+                    const rowClass = isSelected ? 'factura-row selected' : 'factura-row';
+
                     filas += `
-                        <tr class="factura-row" data-factura-id="${factura.idFactura}">
+                        <tr class="${rowClass}" data-factura-id="${factura.idFactura}">
                             <td class="text-center">
                                 <input type="checkbox" class="checkbox-custom chk-factura" 
                                     data-factura='${JSON.stringify(factura).replace(/'/g, "&#39;")}' 
-                                    onchange="toggleFactura(this)">
+                                    onchange="toggleFactura(this)" ${isSelected ? 'checked' : ''}>
                             </td>
                             <td class="fw-semibold">${factura.idFactura}</td>
                             <td>${factura.tipoFactura}</td>
@@ -362,28 +444,52 @@
 
             tblFacturasPendientes.innerHTML = filas;
             
-            // Reset checkbox "Seleccionar todas"
-            document.getElementById('chkSelectAll').checked = false;
+            // Verificar si todos los visibles están seleccionados
+            let visibleCheckboxes = document.querySelectorAll('#tblFacturasPendientes .chk-factura');
+            let allVisibleChecked = visibleCheckboxes.length > 0 && Array.from(visibleCheckboxes).every(chk => chk.checked);
+            document.getElementById('chkSelectAll').checked = allVisibleChecked;
+
+            actualizarTotal(); // Actualizar total después de filtrar
+        }
+        
+        // Verificar estado de factura (copia de facturas.html)
+        function verificarEstadoFactura(factura) {
+            let hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            
+            let fechaVencimiento = new Date(factura.fechaVencimiento + 'T00:00:00');
+            
+            if (factura.estado === 'Pendiente' && hoy > fechaVencimiento) {
+                return 'Vencida';
+            }
+            
+            return factura.estado;
         }
 
         // Seleccionar todas las facturas
         document.getElementById('chkSelectAll').addEventListener('change', function() {
             let checkboxes = document.querySelectorAll('.chk-factura');
+            
+            // Limpiamos la lista de facturas seleccionadas antes de llenarla/vaciarla
+            // Asegurando que solo afectamos las facturas actualmente visibles
+            const facturasVisibles = Array.from(checkboxes).map(chk => JSON.parse(chk.dataset.factura));
+            
+            // Primero, removemos todas las facturas visibles de la lista global de seleccionadas
+            facturasSeleccionadas = facturasSeleccionadas.filter(f => 
+                !facturasVisibles.some(visibleF => visibleF.idFactura === f.idFactura)
+            );
+            
             checkboxes.forEach(chk => {
                 chk.checked = this.checked;
-                // Llamar manualmente la función para cada checkbox
                 let factura = JSON.parse(chk.dataset.factura);
                 let row = chk.closest('tr');
                 
                 if (this.checked) {
-                    // Agregar si no existe
-                    if (!facturasSeleccionadas.find(f => f.idFactura === factura.idFactura)) {
-                        facturasSeleccionadas.push(factura);
-                        row.classList.add('selected');
-                    }
+                    // Si está marcado, agregamos la factura
+                    facturasSeleccionadas.push(factura);
+                    row.classList.add('selected');
                 } else {
-                    // Remover
-                    facturasSeleccionadas = facturasSeleccionadas.filter(f => f.idFactura !== factura.idFactura);
+                    // Si no está marcado, la removemos (ya lo hicimos arriba, pero por si acaso)
                     row.classList.remove('selected');
                 }
             });
@@ -410,6 +516,11 @@
             }
             
             actualizarTotal();
+            
+            // Actualizar el estado de chkSelectAll
+            let visibleCheckboxes = document.querySelectorAll('#tblFacturasPendientes .chk-factura');
+            let allVisibleChecked = visibleCheckboxes.length > 0 && Array.from(visibleCheckboxes).every(chk => chk.checked);
+            document.getElementById('chkSelectAll').checked = allVisibleChecked;
         }
 
         // Actualizar total
@@ -486,6 +597,7 @@
             try {
                 let response = await fetch("/api/registrar_pago", {
                     method: "POST",
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(datos)
                 });
 
@@ -536,5 +648,3 @@
     </script>
 </body>
 </html>
-
-    

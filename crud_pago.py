@@ -23,10 +23,14 @@ class crud_pago:
             
             for idFactura in datos['facturas']:
                 # Obtener el monto de la factura
-                sql_factura = f"SELECT montoTotal FROM facturas WHERE idFactura = {idFactura}"
+                sql_factura = f"SELECT montoTotal, estado FROM facturas WHERE idFactura = {idFactura}"
                 resultado = db.consultar(sql_factura)
                 
                 if len(resultado) > 0:
+                    # Verificar que la factura no esté ya pagada
+                    if resultado[0]['estado'] == 'Pagada':
+                        continue  # Saltar facturas ya pagadas
+                    
                     monto_factura = float(resultado[0]['montoTotal'])
                     
                     # Insertar el pago
@@ -63,11 +67,13 @@ class crud_pago:
             else:
                 return {
                     "status": "error",
-                    "mensaje": "No se pudo registrar ningún pago"
+                    "mensaje": "No se pudo registrar ningún pago o las facturas ya están pagadas"
                 }
                 
         except Exception as e:
             print(f"Error al registrar pago: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 "status": "error",
                 "mensaje": str(e)
